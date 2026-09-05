@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>chrome_dlman — Mockup</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e6e9ef; --dim:#9aa3b2; --acc:#4f8cff; --ok:#3ddc97; --warn:#ffb020; --err:#ff5c5c;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:24px}
+  .grid{display:grid;gap:22px;grid-template-columns:380px 1fr}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .card > header{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;background:var(--panel2)}
+  .card > header .t{font-weight:600;font-size:13px}
+  .card > header .tag{margin-left:auto;font-size:11px;color:var(--dim);border:1px solid var(--line);padding:2px 7px;border-radius:20px}
+  .body{padding:14px}
+
+  /* popup */
+  .pop-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--acc),#8b5cf6);display:grid;place-items:center;font-size:14px}
+  .pop-top .n{font-weight:600}
+  .pop-top .s{font-size:11px;color:var(--dim)}
+  .ico-btn{margin-left:auto;background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:4px 8px;cursor:pointer}
+  .dl{padding:11px 14px;border-bottom:1px solid var(--line)}
+  .dl:last-child{border-bottom:0}
+  .dl-h{display:flex;align-items:center;gap:9px}
+  .ft{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:10px;font-weight:700;flex:0 0 auto}
+  .ft.vid{background:#3a2140;color:#e79bff}
+  .ft.zip{background:#3a3520;color:#ffd479}
+  .ft.iso{background:#1f3340;color:#7fd0ff}
+  .ft.pdf{background:#3d2226;color:#ff8f8f}
+  .ft.doc{background:#1e2f3d;color:#8fc4ff}
+  .meta{min-width:0;flex:1}
+  .fn{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mi{font-size:11px;color:var(--dim);display:flex;gap:7px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);border-radius:20px;padding:0 6px;font-size:10px}
+  .chip.p{border-color:#2c4b7a;color:#8ab4ff}
+  .chip.s{border-color:#2c5c46;color:var(--ok)}
+  .bar{height:6px;background:#242935;border-radius:6px;margin-top:9px;overflow:hidden;display:flex}
+  .seg{height:100%;border-right:1px solid var(--panel)}
+  .seg:last-child{border-right:0}
+  .seg i{display:block;height:100%;background:var(--acc)}
+  .seg.done i{background:var(--ok)}
+  .acts{display:flex;gap:6px;margin-top:9px}
+  .acts button{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:3px 9px;font-size:11px;cursor:pointer}
+  .acts button.pri{color:var(--txt);border-color:#33507e;background:#1b2740}
+  .pop-foot{display:flex;gap:10px;padding:10px 14px;background:var(--panel2);font-size:11px;color:var(--dim)}
+  .pop-foot b{color:var(--txt)}
+
+  /* settings */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;color:var(--dim);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.4px}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .ext{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#8ab4ff}
+  select,input[type=number],input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:4px 7px;font:inherit;font-size:12px}
+  input[type=number]{width:62px}
+  .sw{width:36px;height:20px;border-radius:20px;background:#333a48;position:relative;display:inline-block;cursor:pointer}
+  .sw.on{background:var(--acc)}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+  .sw.on::after{left:18px}
+  .row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .lb{flex:1}
+  .row .lb small{display:block;color:var(--dim);font-size:11px}
+  .note{background:#161d2b;border:1px solid #24344f;border-radius:10px;padding:10px 12px;font-size:12px;color:#a9bde0;margin-top:14px}
+  .note b{color:#cfe0ff}
+  .tabs{display:flex;gap:4px;padding:8px 10px 0;background:var(--panel2)}
+  .tabs span{padding:6px 12px;font-size:12px;border:1px solid transparent;border-bottom:0;border-radius:8px 8px 0 0;color:var(--dim);cursor:pointer}
+  .tabs span.act{background:var(--panel);border-color:var(--line);color:var(--txt)}
+  .seclabel{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim);margin:18px 0 8px}
+  .seclabel:first-child{margin-top:0}
+  code{background:#20242e;padding:1px 5px;border-radius:5px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>chrome_dlman — Arayüz Mockup</h1>
+  <div class="sub">Dosya tipi tanıma + kural bazlı parçalı (multi-connection) indirme</div>
+
+  <div class="grid">
+
+    <!-- ============ POPUP ============ -->
+    <div class="card">
+      <header><span class="t">Popup (toolbar)</span><span class="tag">380×560</span></header>
+      <div class="pop-top">
+        <div class="logo">⬇</div>
+        <div><div class="n">Download Manager</div><div class="s">3 aktif · 12.4 MB/s</div></div>
+        <button class="ico-btn">⚙</button>
+      </div>
+
+      <div class="dl">
+        <div class="dl-h">
+          <div class="ft iso">ISO</div>
+          <div class="meta">
+            <div class="fn">ubuntu-24.04.2-desktop-amd64.iso</div>
+            <div class="mi"><span>2.1 / 6.0 GB</span><span>8.7 MB/s</span><span>~7 dk</span><span class="chip p">8 parça</span></div>
+          </div>
+        </div>
+        <div class="bar">
+          <div class="seg done" style="flex:1"><i style="width:100%"></i></div>
+          <div class="seg done" style="flex:1"><i style="width:100%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:74%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:61%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:38%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:22%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:14%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:5%"></i></div>
+        </div>
+        <div class="acts"><button class="pri">Duraklat</button><button>İptal</button><button>Klasör</button></div>
+      </div>
+
+      <div class="dl">
+        <div class="dl-h">
+          <div class="ft zip">ZIP</div>
+          <div class="meta">
+            <div class="fn">node-modules-backup-2026.zip</div>
+            <div class="mi"><span>318 / 940 MB</span><span>3.4 MB/s</span><span class="chip p">4 parça</span></div>
+          </div>
+        </div>
+        <div class="bar">
+          <div class="seg" style="flex:1"><i style="width:56%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:41%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:29%"></i></div>
+          <div class="seg" style="flex:1"><i style="width:9%"></i></div>
+        </div>
+        <div class="acts"><button class="pri">Duraklat</button><button>İptal</button></div>
+      </div>
+
+      <div class="dl">
+        <div class="dl-h">
+          <div class="ft pdf">PDF</div>
+          <div class="meta">
+            <div class="fn">rapor-q3-final.pdf</div>
+            <div class="mi"><span>1.2 MB</span><span class="chip">tek bağlantı</span><span style="color:var(--warn)">sunucu Range desteklemiyor</span></div>
+          </div>
+        </div>
+        <div class="bar"><div class="seg" style="flex:1"><i style="width:88%"></i></div></div>
+      </div>
+
+      <div class="dl">
+        <div class="dl-h">
+          <div class="ft vid">MP4</div>
+          <div class="meta">
+            <div class="fn">tanitim-video-4k.mp4</div>
+            <div class="mi"><span>1.4 GB</span><span class="chip s">tamamlandı</span><span>02:41</span></div>
+          </div>
+        </div>
+        <div class="bar"><div class="seg done" style="flex:1"><i style="width:100%"></i></div></div>
+      </div>
+
+      <div class="pop-foot"><span>Kuyruk: <b>2</b></span><span>Bugün: <b>7.9 GB</b></span><span style="margin-left:auto">Tümünü gör →</span></div>
+    </div>
+
+    <!-- ============ OPTIONS ============ -->
+    <div class="card">
+      <header><span class="t">Ayarlar (options page)</span><span class="tag">chrome://extensions</span></header>
+      <div class="tabs"><span class="act">Dosya Tipleri</span><span>Genel</span><span>Kurallar</span><span>Geçmiş</span></div>
+      <div class="body">
+
+        <div class="seclabel">Tip bazlı indirme kuralları</div>
+        <table>
+          <thead><tr><th>Uzantı / MIME</th><th>Yakala</th><th>Parça</th><th>Min. boyut</th><th>Klasör</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="ext">.iso .img .dmg</span><br><small style="color:var(--dim)">application/octet-stream</small></td>
+              <td><span class="sw on"></span></td>
+              <td><select><option>8</option><option>16</option></select></td>
+              <td><input type="number" value="50"> MB</td>
+              <td><input type="text" value="ISO" size="8"></td>
+            </tr>
+            <tr>
+              <td><span class="ext">.zip .rar .7z .tar.gz</span></td>
+              <td><span class="sw on"></span></td>
+              <td><select><option>4</option></select></td>
+              <td><input type="number" value="20"> MB</td>
+              <td><input type="text" value="Arşiv" size="8"></td>
+            </tr>
+            <tr>
+              <td><span class="ext">.mp4 .mkv .mov</span></td>
+              <td><span class="sw on"></span></td>
+              <td><select><option>6</option></select></td>
+              <td><input type="number" value="10"> MB</td>
+              <td><input type="text" value="Video" size="8"></td>
+            </tr>
+            <tr>
+              <td><span class="ext">.exe .msi .deb</span></td>
+              <td><span class="sw on"></span></td>
+              <td><select><option>4</option></select></td>
+              <td><input type="number" value="5"> MB</td>
+              <td><input type="text" value="Kurulum" size="8"></td>
+            </tr>
+            <tr>
+              <td><span class="ext">.pdf .docx .xlsx</span></td>
+              <td><span class="sw"></span></td>
+              <td><select disabled><option>1</option></select></td>
+              <td><input type="number" value="0" disabled> MB</td>
+              <td><input type="text" value="Belge" size="8"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="seclabel">Genel</div>
+        <div class="row"><div class="lb">Chrome indirmelerini devral<small>Uygun indirmeler yakalanır, Chrome'un kendi indiricisi iptal edilir</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="lb">Range/Accept-Ranges testi<small>HEAD isteği ile sunucu çoklu bağlantıya izin veriyor mu kontrol et</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="lb">Desteklenmiyorsa tek bağlantıya düş<small>Otomatik fallback</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="lb">Eşzamanlı indirme limiti<small>Toplam aktif dosya sayısı</small></div><input type="number" value="3"></div>
+        <div class="row"><div class="lb">Hız limiti<small>0 = sınırsız</small></div><input type="number" value="0"> <span style="color:var(--dim);font-size:12px">MB/s</span></div>
+        <div class="row"><div class="lb">Yeniden deneme<small>Parça hatasında</small></div><input type="number" value="5"> <span style="color:var(--dim);font-size:12px">kez</span></div>
+
+        <div class="note">
+          <b>Teknik not (mockup'ta gösterilmiyor):</b> MV3 eklentisi <code>chrome.downloads.onDeterminingFilename</code> ile indirmeyi yakalayıp iptal eder, ardından <code>fetch</code> + <code>Range</code> header ile N paralel istek atar. Parçalar <code>OPFS</code>'e yazılır, birleştirilip <code>chrome.downloads.download(blobUrl)</code> ile diske verilir. Bu, çok büyük dosyalarda disk/bellek sınırına takılır — 4 GB+ senaryosu için <b>Native Messaging + küçük yerel yardımcı (Rust/Go)</b> alternatifi ikinci aşamada değerlendirilmeli.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
