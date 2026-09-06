@@ -278,7 +278,7 @@ export class Engine {
 
   async #finish(task) {
     this.#setStatus(task, STATUS.ASSEMBLING);
-    const blob = await assemble(task.id, task.segments.length, task.mime);
+    const blob = await assemble(task.id, task.segments, task.mime);
 
     if (task.totalBytes > 0 && blob.size !== task.totalBytes) {
       throw new Error(`size mismatch: got ${blob.size}, expected ${task.totalBytes}`);

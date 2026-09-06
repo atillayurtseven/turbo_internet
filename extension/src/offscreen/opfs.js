@@ -26,11 +26,13 @@ export function partName(taskId, index) {
  * The MIME type matters: Chrome rewrites the extension of a downloaded blob to
  * match its type, so an untyped blob turns "disk.iso" into "disk.txt".
  */
-export async function assemble(taskId, segmentCount, type = 'application/octet-stream') {
+export async function assemble(taskId, segments, type = 'application/octet-stream') {
   const handle = await dir();
   const parts = [];
-  for (let index = 0; index < segmentCount; index += 1) {
-    const file = await handle.getFileHandle(partName(taskId, index), { create: false });
+  // Ordered by offset, not by index: work stealing appends split segments whose
+  // index says nothing about where they belong in the file.
+  for (const segment of [...segments].sort((a, b) => a.start - b.start)) {
+    const file = await handle.getFileHandle(partName(taskId, segment.index), { create: false });
     parts.push(await file.getFile());
   }
   return new Blob(parts, { type: type || 'application/octet-stream' });

@@ -103,7 +103,10 @@ function infoParts(task) {
 }
 
 function barSegments(task) {
-  const segments = task.segments?.length ? task.segments : [null];
+  // By offset, not array order: work stealing appends split segments at the end.
+  const segments = task.segments?.length
+    ? [...task.segments].sort((a, b) => a.start - b.start)
+    : [null];
   return segments.map((segment) => {
     const wrap = document.createElement('div');
     wrap.className = 'seg';

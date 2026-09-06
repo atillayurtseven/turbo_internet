@@ -53,11 +53,25 @@ Store, PDF görüntüleyici) soru sorulmaz ve indirme Chrome'da kalır.
 
 Ayarlardan "her zaman devral" veya "asla devralma" seçilebilir.
 
+## Work stealing
+Erken biten bir bağlantı boşta beklemez: en çok işi kalan parçayı ikiye böler ve kuyruk
+yarısını devralır. Korumalar:
+- kalan iş 2 MB'ın altındaysa bölünmez (bağlantı maliyeti kazancı aşar)
+- dosyanın %90'ı bittikten sonra hiç bölünmez
+- toplam parça sayısı 32'yi geçemez
+
+Bu üçü birlikte bölmenin kendi kuyruğunu kovalamasını imkânsız kılar: her bölme en az
+1 MB'lık yeni iş yaratır ve toplam boyut sonludur.
+
 ## Doğrulama
 Uçtan uca test, Chrome'u `--load-extension` ile başlatıp CDP üzerinden konsolu okuyarak
 yapıldı (`--disable-features=DisableLoadExtensionCommandLineSwitch` gerekiyor; Chrome 137+
 bu anahtarı varsayılan olarak kapatıyor). 10 MB'lık bir dosya 4 parça hâlinde indirildi;
 sonucun SHA-256'sı sunucudaki dosyayla birebir aynı çıktı.
+
+Work stealing ayrıca Range destekli yerel bir test sunucusuyla doğrulandı: dosyanın son
+çeyreği kasıtlı yavaşlatıldı, 3 bölme tetiklendi (seg3→seg4, seg3→seg5, seg4→seg6) ve
+40 MB'lık sonucun SHA-256'sı referansla birebir eşleşti.
 
 ## Bilinen sınırlar
 - Tek bağlantıya düşen (Range desteklemeyen) sunucularda dosya 1 GB'ı geçemez.
