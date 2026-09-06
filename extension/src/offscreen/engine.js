@@ -8,7 +8,14 @@ import {
 import { planSegments, segmentCount } from '../background/rules.js';
 import { sanitizeFilename } from '../shared/filetypes.js';
 import { probe } from './probe.js';
-import { deletePart, openPartFile, pruneOrphans, requestPersistence } from './opfs.js';
+import {
+  MAX_PART_BYTES,
+  assemble,
+  deleteParts,
+  pruneOrphans,
+  quota,
+  requestPersistence,
+} from './opfs.js';
 
 /**
  * Owns every live download. Runs in the offscreen document so it is not killed
@@ -71,7 +78,7 @@ export class Engine {
       rangeSupported: null,
     };
     this.#tasks.set(task.id, fresh);
-    deletePart(task.id);
+    deleteParts(task.id);
     this.#push();
     this.#pump();
   }
@@ -86,7 +93,7 @@ export class Engine {
       await new Promise((resolve) => setTimeout(resolve, 100));
       this.#terminate(id);
     }
-    await deletePart(id);
+    await deleteParts(id);
     if (task) {
       task.status = STATUS.CANCELED;
       task.speed = 0;
@@ -99,7 +106,7 @@ export class Engine {
   releaseBlob(id, blobUrl) {
     URL.revokeObjectURL(blobUrl ?? this.#blobs.get(id));
     this.#blobs.delete(id);
-    deletePart(id);
+    deleteParts(id);
   }
 
   // ---- internals -----------------------------------------------------------
@@ -155,12 +162,24 @@ export class Engine {
         throw new Error('range-unsupported');
       }
 
+      // Parts are staged on disk before being handed to Chrome, so the file
+      // has to fit in the origin's storage quota on top of its final location.
+      const { free } = await quota();
+      if (task.totalBytes > 0 && task.totalBytes > free) {
+        throw new Error(`not enough browser storage: needs ${task.totalBytes}, free ${free}`);
+      }
+
+      if (!result.rangeSupported && task.totalBytes > MAX_PART_BYTES) {
+        throw new Error('file too large to download over a single connection');
+      }
+
       const count =
         result.rangeSupported && this.#settings.probeRanges
           ? segmentCount(
               { connections: task.connections },
               task.totalBytes,
               this.#settings.minSegmentSizeBytes,
+              MAX_PART_BYTES,
             )
           : 1;
       task.segments = planSegments(task.totalBytes, count);
@@ -228,7 +247,7 @@ export class Engine {
         break;
 
       case 'done':
-        task.receivedBytes = task.totalBytes || task.receivedBytes;
+        task.receivedBytes = message.receivedBytes ?? task.receivedBytes;
         this.#terminate(id);
         this.#finish(task).catch((error) => this.#fail(task, error));
         break;
@@ -259,14 +278,14 @@ export class Engine {
 
   async #finish(task) {
     this.#setStatus(task, STATUS.ASSEMBLING);
-    const file = await openPartFile(task.id);
+    const blob = await assemble(task.id, task.segments.length);
 
-    if (task.totalBytes > 0 && file.size !== task.totalBytes) {
-      throw new Error('size-mismatch');
+    if (task.totalBytes > 0 && blob.size !== task.totalBytes) {
+      throw new Error(`size mismatch: got ${blob.size}, expected ${task.totalBytes}`);
     }
 
-    // Backed by the OPFS file on disk — creating the URL does not read it in.
-    const blobUrl = URL.createObjectURL(file);
+    // The Blob references the part files on disk; it is not read into memory.
+    const blobUrl = URL.createObjectURL(blob);
     this.#blobs.set(task.id, blobUrl);
 
     const response = await chrome.runtime.sendMessage({

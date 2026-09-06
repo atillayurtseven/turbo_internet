@@ -70,5 +70,15 @@
   "error.aborted": "İndirme durduruldu",
   "error.retriesExhausted": "{index}. parça {n} denemeden sonra başarısız oldu",
   "menu.downloadWith": "İndirme Yöneticisi ile indir",
-  "menu.forceRule": "Sağ tık menüsünden zorlandı"
+  "menu.forceRule": "Sağ tık menüsünden zorlandı",
+  "prompt.title": "İndirme Yöneticisi",
+  "prompt.question": "Bu dosya İndirme Yöneticisi ile indirilsin mi?",
+  "prompt.yes": "Yönetici ile indir",
+  "prompt.no": "Hayır, Chrome ile",
+  "prompt.countdown": "{n} sn sonra Chrome devam eder",
+  "options.general.captureMode": "Eşleşen bir indirme başladığında",
+  "options.general.captureModeDesc": "Hangi indirmelerin kapsandığına kurallar karar verir.",
+  "options.general.modeAsk": "Her seferinde sor",
+  "options.general.modeAlways": "Her zaman devral",
+  "options.general.modeOff": "Asla devralma"
 }

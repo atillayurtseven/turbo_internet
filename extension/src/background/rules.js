@@ -20,7 +20,7 @@ export function matchRule(rules, { filename, url, mime }) {
  * Returns { capture: boolean, rule, reason }.
  */
 export function decide(settings, candidate) {
-  if (!settings.captureEnabled) return { capture: false, rule: null, reason: 'capture-disabled' };
+  if (settings.captureMode === 'off') return { capture: false, rule: null, reason: 'capture-disabled' };
 
   const url = candidate.url || '';
   if (!/^https?:/i.test(url)) return { capture: false, rule: null, reason: 'unsupported-scheme' };
@@ -38,12 +38,18 @@ export function decide(settings, candidate) {
   return { capture: true, rule, reason: 'matched' };
 }
 
-/** Number of segments to use for a file of `size` bytes under `rule`. */
-export function segmentCount(rule, size, minSegmentSizeBytes) {
+/**
+ * Number of segments for a file of `size` bytes under `rule`.
+ * `maxPartBytes` is a hard floor on the count: OPFS files must stay small
+ * enough to be written reliably, so a large file is split further than the
+ * rule alone would ask for.
+ */
+export function segmentCount(rule, size, minSegmentSizeBytes, maxPartBytes = Infinity) {
   if (!Number.isFinite(size) || size <= 0) return 1;
   const byRule = Math.max(1, rule.connections);
   const bySize = Math.max(1, Math.floor(size / Math.max(1, minSegmentSizeBytes)));
-  return Math.max(1, Math.min(byRule, bySize));
+  const required = Math.ceil(size / maxPartBytes);
+  return Math.max(required, Math.min(byRule, bySize));
 }
 
 /** Splits a byte range into `count` inclusive [start, end] segments. */

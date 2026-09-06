@@ -1,4 +1,5 @@
 import { decide } from './rules.js';
+import { CHOICE_MANAGER, askUser } from './prompt.js';
 import { sanitizeFilename } from '../shared/filetypes.js';
 
 /**
@@ -26,9 +27,10 @@ export function registerInterceptor({ getSettings, onCapture }) {
           finish();
           return;
         }
-        // Release Chrome's hold first, then take the download away from it.
+        // Release Chrome's hold first, then decide who finishes the job.
         finish();
-        await takeOver(item, verdict, onCapture);
+        if (verdict.mode === 'ask') await confirmThenTakeOver(item, verdict, onCapture);
+        else await takeOver(item, verdict, onCapture);
       })
       .catch((error) => {
         console.error('[dlman] interception failed', error);
@@ -55,7 +57,56 @@ async function evaluate(item, getSettings) {
   };
 
   const verdict = decide(settings, candidate);
-  return { ...verdict, url, filename, mime: candidate.mime };
+  return {
+    ...verdict,
+    url,
+    filename,
+    mime: candidate.mime,
+    mode: settings.captureMode,
+    seconds: settings.promptSeconds,
+  };
+}
+
+/**
+ * Holds Chrome's download while the user is asked. Saying no simply resumes it,
+ * so the file still arrives either way.
+ */
+async function confirmThenTakeOver(item, verdict, onCapture) {
+  const paused = await pause(item.id);
+
+  const choice = await askUser({
+    filename: verdict.filename,
+    sizeBytes: item.totalBytes > 0 ? item.totalBytes : item.fileSize,
+    seconds: verdict.seconds,
+  });
+
+  if (choice === CHOICE_MANAGER) {
+    await takeOver(item, verdict, onCapture);
+    return;
+  }
+
+  console.info('[dlman] declined, Chrome keeps the download', verdict.filename);
+  if (paused) {
+    try {
+      await chrome.downloads.resume(item.id);
+    } catch (error) {
+      console.error('[dlman] could not resume Chrome download', error);
+    }
+  }
+}
+
+/** The download may not be in progress yet, so pausing gets a few tries. */
+async function pause(id) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await chrome.downloads.pause(id);
+      return true;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  console.warn('[dlman] could not pause; Chrome keeps downloading while we ask');
+  return false;
 }
 
 async function takeOver(item, verdict, onCapture) {

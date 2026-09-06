@@ -70,5 +70,15 @@
   "error.aborted": "Download aborted",
   "error.retriesExhausted": "Segment {index} failed after {n} attempts",
   "menu.downloadWith": "Download with Download Manager",
-  "menu.forceRule": "Forced by context menu"
+  "menu.forceRule": "Forced by context menu",
+  "prompt.title": "Download Manager",
+  "prompt.question": "Download this file with Download Manager?",
+  "prompt.yes": "Use manager",
+  "prompt.no": "No, use Chrome",
+  "prompt.countdown": "Chrome continues in {n} s",
+  "options.general.captureMode": "When a matching download starts",
+  "options.general.captureModeDesc": "Rules decide which downloads this applies to.",
+  "options.general.modeAsk": "Ask each time",
+  "options.general.modeAlways": "Always take over",
+  "options.general.modeOff": "Never take over"
 }

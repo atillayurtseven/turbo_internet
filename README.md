@@ -31,9 +31,11 @@ Dosya tipi tanıyan, kural bazlı **parçalı (multi-connection)** Chrome indirm
 **Neden offscreen document?** MV3 service worker'ı ~30 sn boşta kalınca öldürülür ve
 `URL.createObjectURL` service worker'da yok. Offscreen belge her ikisini de çözer.
 
-**Neden OPFS + SyncAccessHandle?** Parçalar RAM'de biriktirilmez; tek bir `.part` dosyasına
-offset'lerine yazılır. Sonda `getFile()` diskle desteklenen bir `File` döndürür, ondan
-üretilen blob URL'i dosyayı belleğe okumaz — çok GB'lık indirmeler bu yüzden sorun olmuyor.
+**Neden parça başına ayrı OPFS dosyası?** Ölçtük: OPFS'te tek bir dosyayı ~2 GB üstüne
+`truncate()` ile büyütmek **sessizce başarısız oluyor** — hata fırlatmıyor, dosya 0 byte
+kalıyor (kota 11 GB olsa bile). Bu yüzden her segment kendi dosyasına yazılır ve sonda
+`new Blob([p0, p1, ...])` ile birleştirilir. Blob parçaları diskteki dosyalara referans
+verir, belleğe okunmaz. Segment sayısı, hiçbir parça 1 GB'ı geçmeyecek şekilde artırılır.
 
 ## Akış
 1. `onDeterminingFilename` → kural eşleşmesi → eşleşirse Chrome indirmesi iptal + erase
@@ -42,7 +44,19 @@ offset'lerine yazılır. Sonda `getFile()` diskle desteklenen bir `File` döndü
 3. Segment planı → worker → paralel indirme, parça başına retry + exponential backoff
 4. Bitince blob URL → `chrome.downloads.download()` → `.part` silinir
 
+## Kullanıcıya sorma
+Varsayılan mod **"her seferinde sor"**. Eşleşen bir indirme başlayınca Chrome'un indirmesi
+duraklatılır ve aktif sekmenin sağ üstünde bir kart çıkar. "Yönetici ile indir" → Chrome
+indirmesi iptal edilip motora devredilir. "Hayır" / Esc / 20 sn sessizlik → Chrome'un
+indirmesi kaldığı yerden devam eder. Kart enjekte edilemeyen sayfalarda (chrome://, Web
+Store, PDF görüntüleyici) soru sorulmaz ve indirme Chrome'da kalır.
+
+Ayarlardan "her zaman devral" veya "asla devralma" seçilebilir.
+
 ## Bilinen sınırlar
+- Tek bağlantıya düşen (Range desteklemeyen) sunucularda dosya 1 GB'ı geçemez.
+- Dosya diske yazılana kadar tarayıcı depolamasında bir kopyası durur; 6 GB'lık bir ISO
+  geçici olarak ~13 GB yer ister. Kota yetmezse indirme baştan reddedilir.
 - `Referer`, fetch'te yasaklı bir header. `referrer` + `referrerPolicy: 'unsafe-url'` ile
   aktarılıyor; katı hotlink korumalı sunucularda declarativeNetRequest kuralı gerekebilir.
 - Range desteklemeyen sunucularda duraklat/devam et yoktur — devam, baştan başlatır.

@@ -1,12 +1,13 @@
 /**
- * One worker per download. It owns the exclusive OPFS sync access handle for
- * the part file and runs every segment fetch, writing each chunk straight to
- * its byte offset. Nothing is buffered in memory beyond a single chunk.
+ * One worker per download. Every segment writes to its own OPFS file through an
+ * exclusive sync access handle, so nothing is buffered in memory beyond a
+ * single chunk and no file ever approaches the ~2 GB ceiling that makes large
+ * OPFS files fail silently.
  */
 import { OPFS_DIR, PROGRESS_INTERVAL_MS } from '../shared/constants.js';
 import { referrerInit, HttpError } from './probe.js';
 
-let accessHandle = null;
+let handles = new Map();
 let controller = null;
 let config = null;
 let segments = [];
@@ -30,32 +31,36 @@ async function start(payload) {
   segments = payload.segments.map((segment) => ({ ...segment }));
   controller = new AbortController();
 
+  const dir = await openDir();
+  for (const segment of segments) {
+    const file = await dir.getFileHandle(`${config.id}.${segment.index}.part`, { create: true });
+    const handle = await file.createSyncAccessHandle();
+    // The file on disk is the authority on how much of this segment is done.
+    segment.received = handle.getSize();
+    handles.set(segment.index, handle);
+  }
+
   console.info('[dlman/worker] start', config.id, {
     segments: segments.length,
     totalBytes: config.totalBytes,
     rangeSupported: config.rangeSupported,
+    resumedBytes: totalReceived(),
   });
-  accessHandle = await openHandle(config.id);
-  if (config.totalBytes > 0) accessHandle.truncate(config.totalBytes);
 
   const limiter = createLimiter(config.speedLimit);
   progressTimer = setInterval(reportProgress, PROGRESS_INTERVAL_MS);
 
   try {
     await Promise.all(segments.map((segment) => runSegment(segment, limiter)));
-    if (config.totalBytes <= 0) accessHandle.truncate(totalReceived());
-    accessHandle.flush();
-    close();
+    closeHandles();
+    clearInterval(progressTimer);
     reportProgress();
-    self.postMessage({ type: 'done', totalBytes: config.totalBytes || totalReceived() });
+    self.postMessage({ type: 'done', receivedBytes: totalReceived() });
   } catch (error) {
-    if (controller.signal.aborted) {
-      flushAndClose();
-      self.postMessage({ type: 'stopped', segments: snapshot() });
-    } else {
-      flushAndClose();
-      fail(error);
-    }
+    closeHandles();
+    clearInterval(progressTimer);
+    if (controller.signal.aborted) self.postMessage({ type: 'stopped', segments: snapshot() });
+    else fail(error);
   } finally {
     running = false;
   }
@@ -80,16 +85,13 @@ async function runSegment(segment, limiter) {
       if (controller.signal.aborted) throw error;
       lastError = error;
       if (error instanceof HttpError && !error.retryable) break;
-      // Exponential backoff, capped so a long outage does not stall forever.
-      const delay = Math.min(config.backoffMs * 2 ** attempt, 30000);
-      await sleep(delay, controller.signal);
+      await sleep(Math.min(config.backoffMs * 2 ** attempt, 30000), controller.signal);
     }
   }
 
-  const error = new Error(`segment-failed:${segment.index}`);
+  const error = new Error(lastError?.message || 'segment failed');
   error.segmentIndex = segment.index;
   error.attempts = attempts;
-  error.cause = lastError;
   throw error;
 }
 
@@ -111,27 +113,23 @@ async function fetchSegment(segment, limiter) {
   });
 
   if (!response.ok) throw new HttpError(response.status);
-  if (config.rangeSupported && response.status !== 206) {
-    // The server ignored the Range header; continuing would corrupt the file.
-    throw new HttpError(response.status);
-  }
-  if (!response.body) throw new Error('empty-body');
+  // A server that ignores Range would restart the body and corrupt the part.
+  if (config.rangeSupported && response.status !== 206) throw new HttpError(response.status);
+  if (!response.body) throw new Error('empty response body');
 
+  const handle = handles.get(segment.index);
   const reader = response.body.getReader();
-  let position = from;
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     if (limiter) await limiter.take(value.byteLength);
-    accessHandle.write(value, { at: position });
-    position += value.byteLength;
+    // Offsets are relative to this segment's own file.
+    handle.write(value, { at: segment.received });
     segment.received += value.byteLength;
   }
 
-  if (!isSegmentComplete(segment) && segment.end !== null) {
-    throw new Error('short-read');
-  }
+  if (segment.end !== null && !isSegmentComplete(segment)) throw new Error('short read');
 }
 
 function isSegmentComplete(segment) {
@@ -152,6 +150,7 @@ function reportProgress() {
 }
 
 function fail(error) {
+  console.error('[dlman/worker] failed', error);
   self.postMessage({
     type: 'error',
     message: String(error?.message || error),
@@ -161,31 +160,21 @@ function fail(error) {
   });
 }
 
-function flushAndClose() {
-  try {
-    accessHandle?.flush();
-  } catch {
-    // The handle may already be closed.
+function closeHandles() {
+  for (const handle of handles.values()) {
+    try {
+      handle.flush();
+      handle.close();
+    } catch {
+      // Already closed.
+    }
   }
-  close();
+  handles = new Map();
 }
 
-function close() {
-  clearInterval(progressTimer);
-  progressTimer = 0;
-  try {
-    accessHandle?.close();
-  } catch {
-    // Already closed.
-  }
-  accessHandle = null;
-}
-
-async function openHandle(taskId) {
+async function openDir() {
   const root = await navigator.storage.getDirectory();
-  const dir = await root.getDirectoryHandle(OPFS_DIR, { create: true });
-  const file = await dir.getFileHandle(`${taskId}.part`, { create: true });
-  return file.createSyncAccessHandle();
+  return root.getDirectoryHandle(OPFS_DIR, { create: true });
 }
 
 /** Token bucket shared by every segment of this download. */
@@ -204,8 +193,7 @@ function createLimiter(bytesPerSecond) {
           tokens -= bytes;
           return;
         }
-        const waitMs = ((bytes - tokens) / bytesPerSecond) * 1000;
-        await sleep(Math.min(waitMs, 250), controller.signal);
+        await sleep(Math.min(((bytes - tokens) / bytesPerSecond) * 1000, 250), controller.signal);
       }
     },
   };

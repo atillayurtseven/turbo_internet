@@ -110,7 +110,7 @@ function addRule() {
 function renderGeneral() {
   const panel = document.getElementById('general');
   panel.replaceChildren(
-    switchRow('options.general.capture', 'options.general.captureDesc', 'captureEnabled'),
+    captureModeRow(),
     switchRow('options.general.probe', 'options.general.probeDesc', 'probeRanges'),
     switchRow('options.general.fallback', 'options.general.fallbackDesc', 'fallbackSingleConnection'),
     numberRow('options.general.maxConcurrent', 'options.general.maxConcurrentDesc',
@@ -125,6 +125,22 @@ function renderGeneral() {
       (value) => { settings.minSegmentSizeBytes = value * MB; }, 'unit.mb'),
     languageRow(),
   );
+}
+
+function captureModeRow() {
+  const select = document.createElement('select');
+  const modes = [
+    ['ask', 'options.general.modeAsk'],
+    ['always', 'options.general.modeAlways'],
+    ['off', 'options.general.modeOff'],
+  ];
+  for (const [value, key] of modes) {
+    select.append(new Option(t(key), value, false, settings.captureMode === value));
+  }
+  select.addEventListener('change', () => {
+    settings.captureMode = select.value;
+  });
+  return row('options.general.captureMode', 'options.general.captureModeDesc', select);
 }
 
 function languageRow() {

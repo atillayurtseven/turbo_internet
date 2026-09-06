@@ -6,7 +6,8 @@ const STORAGE_KEY = 'settings';
 export const DEFAULT_SETTINGS = Object.freeze({
   version: 1,
   language: 'auto',
-  captureEnabled: true,
+  captureMode: 'ask', // 'ask' | 'always' | 'off'
+  promptSeconds: 20,
   probeRanges: true,
   fallbackSingleConnection: true,
   maxConcurrentDownloads: 3,
@@ -97,7 +98,8 @@ export function normalizeSettings(raw) {
   return {
     version: d.version,
     language,
-    captureEnabled: raw?.captureEnabled !== false,
+    captureMode: ['ask', 'always', 'off'].includes(raw?.captureMode) ? raw.captureMode : 'ask',
+    promptSeconds: clampInt(raw?.promptSeconds, 5, 120, d.promptSeconds),
     probeRanges: raw?.probeRanges !== false,
     fallbackSingleConnection: raw?.fallbackSingleConnection !== false,
     maxConcurrentDownloads: clampInt(raw?.maxConcurrentDownloads, 1, 10, d.maxConcurrentDownloads),
