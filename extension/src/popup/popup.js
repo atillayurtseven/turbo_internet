@@ -90,9 +90,9 @@ function infoParts(task) {
     add(t(`status.${task.status}`));
   }
 
-  // The segment count is already visible in the progress bar itself.
-  if (task.status === STATUS.COMPLETED) add(t('status.completed'), 'chip ok');
-  else if (task.rangeSupported === false) {
+  // Neither the segment count nor "completed" needs a chip: the progress bar
+  // shows both, split into segments and filled green when it is done.
+  if (task.status !== STATUS.COMPLETED && task.rangeSupported === false) {
     add(t('popup.singleConnection'), 'chip');
     add(t('popup.noRangeSupport'), 'warn');
   }
