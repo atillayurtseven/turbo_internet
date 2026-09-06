@@ -1,7 +1,6 @@
 {
   "app.name": "Download Manager",
   "app.tagline": "{active} active · {speed}",
-
   "status.queued": "Queued",
   "status.probing": "Checking server…",
   "status.downloading": "Downloading",
@@ -10,7 +9,6 @@
   "status.completed": "Completed",
   "status.error": "Failed",
   "status.canceled": "Canceled",
-
   "action.pause": "Pause",
   "action.resume": "Resume",
   "action.cancel": "Cancel",
@@ -22,7 +20,6 @@
   "action.save": "Save",
   "action.add": "Add",
   "action.reset": "Reset to defaults",
-
   "popup.empty": "No downloads yet.",
   "popup.queue": "Queue: {n}",
   "popup.today": "Today: {size}",
@@ -30,12 +27,10 @@
   "popup.segments": "{n} segments",
   "popup.singleConnection": "single connection",
   "popup.noRangeSupport": "server does not support ranges",
-
   "options.title": "Download Manager — Settings",
   "options.tab.fileTypes": "File types",
   "options.tab.general": "General",
   "options.tab.about": "About",
-
   "options.rules.heading": "Per-type download rules",
   "options.rules.desc": "The first matching rule wins. Downloads that match no rule are left to Chrome.",
   "options.rules.col.match": "Extensions / MIME",
@@ -48,7 +43,6 @@
   "options.rules.label": "Label",
   "options.rules.extensions": "Extensions (comma separated)",
   "options.rules.mime": "MIME patterns (comma separated, * allowed)",
-
   "options.general.capture": "Take over Chrome downloads",
   "options.general.captureDesc": "Matching downloads are canceled in Chrome and handled by this extension.",
   "options.general.probe": "Probe Accept-Ranges",
@@ -65,17 +59,16 @@
   "options.general.minSegmentSizeDesc": "Files are split into fewer segments rather than going below this size.",
   "options.general.language": "Language",
   "options.general.languageAuto": "Automatic (browser)",
-
   "options.saved": "Settings saved.",
-
   "unit.mb": "MB",
   "unit.mbps": "MB/s",
   "unit.times": "times",
-
   "error.network": "Network error",
   "error.httpStatus": "Server returned HTTP {status}",
   "error.sizeMismatch": "The server reported a different file size",
   "error.storage": "Could not write to local storage",
   "error.aborted": "Download aborted",
-  "error.retriesExhausted": "Segment {index} failed after {n} attempts"
+  "error.retriesExhausted": "Segment {index} failed after {n} attempts",
+  "menu.downloadWith": "Download with Download Manager",
+  "menu.forceRule": "Forced by context menu"
 }

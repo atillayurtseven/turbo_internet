@@ -1,7 +1,6 @@
 {
   "app.name": "İndirme Yöneticisi",
   "app.tagline": "{active} aktif · {speed}",
-
   "status.queued": "Kuyrukta",
   "status.probing": "Sunucu kontrol ediliyor…",
   "status.downloading": "İndiriliyor",
@@ -10,7 +9,6 @@
   "status.completed": "Tamamlandı",
   "status.error": "Başarısız",
   "status.canceled": "İptal edildi",
-
   "action.pause": "Duraklat",
   "action.resume": "Devam et",
   "action.cancel": "İptal",
@@ -22,7 +20,6 @@
   "action.save": "Kaydet",
   "action.add": "Ekle",
   "action.reset": "Varsayılanlara dön",
-
   "popup.empty": "Henüz indirme yok.",
   "popup.queue": "Kuyruk: {n}",
   "popup.today": "Bugün: {size}",
@@ -30,12 +27,10 @@
   "popup.segments": "{n} parça",
   "popup.singleConnection": "tek bağlantı",
   "popup.noRangeSupport": "sunucu Range desteklemiyor",
-
   "options.title": "İndirme Yöneticisi — Ayarlar",
   "options.tab.fileTypes": "Dosya tipleri",
   "options.tab.general": "Genel",
   "options.tab.about": "Hakkında",
-
   "options.rules.heading": "Tip bazlı indirme kuralları",
   "options.rules.desc": "Eşleşen ilk kural uygulanır. Hiçbir kurala uymayan indirmeler Chrome'a bırakılır.",
   "options.rules.col.match": "Uzantı / MIME",
@@ -48,7 +43,6 @@
   "options.rules.label": "Etiket",
   "options.rules.extensions": "Uzantılar (virgülle ayrılmış)",
   "options.rules.mime": "MIME kalıpları (virgülle ayrılmış, * kullanılabilir)",
-
   "options.general.capture": "Chrome indirmelerini devral",
   "options.general.captureDesc": "Eşleşen indirmeler Chrome'da iptal edilip bu eklenti tarafından yürütülür.",
   "options.general.probe": "Accept-Ranges kontrolü",
@@ -65,17 +59,16 @@
   "options.general.minSegmentSizeDesc": "Bu boyutun altına inmek yerine dosya daha az parçaya bölünür.",
   "options.general.language": "Dil",
   "options.general.languageAuto": "Otomatik (tarayıcı)",
-
   "options.saved": "Ayarlar kaydedildi.",
-
   "unit.mb": "MB",
   "unit.mbps": "MB/s",
   "unit.times": "kez",
-
   "error.network": "Ağ hatası",
   "error.httpStatus": "Sunucu HTTP {status} döndü",
   "error.sizeMismatch": "Sunucu farklı bir dosya boyutu bildirdi",
   "error.storage": "Yerel depolamaya yazılamadı",
   "error.aborted": "İndirme durduruldu",
-  "error.retriesExhausted": "{index}. parça {n} denemeden sonra başarısız oldu"
+  "error.retriesExhausted": "{index}. parça {n} denemeden sonra başarısız oldu",
+  "menu.downloadWith": "İndirme Yöneticisi ile indir",
+  "menu.forceRule": "Sağ tık menüsünden zorlandı"
 }

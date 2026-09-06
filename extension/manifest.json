@@ -8,7 +8,8 @@
     "downloads",
     "storage",
     "unlimitedStorage",
-    "offscreen"
+    "offscreen",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"

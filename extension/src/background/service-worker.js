@@ -1,6 +1,8 @@
-import { MSG, STATUS } from '../shared/constants.js';
+import { ACTIVE_STATUSES, MSG, STATUS } from '../shared/constants.js';
 import { loadSettings, onSettingsChanged } from '../shared/settings.js';
 import { joinPath } from '../shared/filetypes.js';
+import { initI18n, t } from '../shared/i18n.js';
+import { matchRule } from './rules.js';
 import { registerInterceptor } from './interceptor.js';
 import { ensureOffscreen, sendToOffscreen } from './offscreen.js';
 import * as state from './state.js';
@@ -17,10 +19,13 @@ let settings = null;
 const ready = (async () => {
   settings = await loadSettings();
   await state.loadState();
+  await initI18n(settings.language);
 })();
 
 onSettingsChanged(async (next) => {
   settings = next;
+  await initI18n(next.language);
+  await installContextMenu();
   try {
     await sendToOffscreen(MSG.APPLY_SETTINGS, next);
   } catch {
@@ -29,25 +34,72 @@ onSettingsChanged(async (next) => {
 });
 
 registerInterceptor({
-  getSettings: () => settings,
-  onCapture: async (candidate) => {
+  // Awaited: the event can arrive before storage has been read on a cold start.
+  getSettings: async () => {
     await ready;
-    const task = createTask(candidate);
-    await state.upsert(task);
-    broadcast();
-    await sendToOffscreen(MSG.ENQUEUE, { task, settings });
+    return settings;
   },
+  onCapture: (candidate) => start(candidate),
 });
+
+/** Queues a download and hands it to the engine. */
+async function start(candidate) {
+  await ready;
+  const task = createTask(candidate);
+  await state.upsert(task);
+  broadcast();
+  await sendToOffscreen(MSG.ENQUEUE, { task, settings });
+  return task;
+}
+
+// ---- context menu -----------------------------------------------------------
+
+const MENU_ID = 'dlman-download-link';
+
+/**
+ * A right-click entry that bypasses the rules entirely. Useful when a link does
+ * not match any rule, and the reliable way to test the engine on demand.
+ */
+async function installContextMenu() {
+  await chrome.contextMenus.removeAll();
+  chrome.contextMenus.create({
+    id: MENU_ID,
+    title: t('menu.downloadWith'),
+    contexts: ['link'],
+  });
+}
+
+chrome.contextMenus.onClicked.addListener(async (info) => {
+  if (info.menuItemId !== MENU_ID || !info.linkUrl) return;
+  await ready;
+  const filename = decodeURIComponent(new URL(info.linkUrl).pathname.split('/').pop() || 'download');
+  const matched = matchRule(settings.rules, { filename, url: info.linkUrl, mime: '' });
+  await start({
+    url: info.linkUrl,
+    filename,
+    mime: '',
+    referrer: info.pageUrl || '',
+    sizeHint: 0,
+    // The size gate is deliberately dropped here; the user asked explicitly.
+    rule: { ...(matched ?? fallbackRule()), minSizeBytes: 0 },
+  });
+});
+
+function fallbackRule() {
+  return { id: 'context-menu', label: t('menu.forceRule'), connections: 4, subfolder: '' };
+}
 
 chrome.runtime.onStartup.addListener(async () => {
   await ready;
   await state.markInterrupted();
+  await installContextMenu();
   broadcast();
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
   await ready;
   await state.markInterrupted();
+  await installContextMenu();
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -185,11 +237,18 @@ function createTask(candidate) {
 }
 
 function broadcast() {
+  updateBadge();
   chrome.runtime
     .sendMessage({ target: 'ui', type: MSG.STATE_BROADCAST, payload: state.getTasks() })
     .catch(() => {
       // No popup or options page is open.
     });
+}
+
+function updateBadge() {
+  const active = state.getTasks().filter((task) => ACTIVE_STATUSES.has(task.status)).length;
+  chrome.action.setBadgeText({ text: active ? String(active) : '' });
+  chrome.action.setBadgeBackgroundColor({ color: '#4f6bff' });
 }
 
 // Keep the engine warm while there is unfinished work.
