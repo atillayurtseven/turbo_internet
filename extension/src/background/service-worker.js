@@ -39,6 +39,9 @@ registerInterceptor({
     await ready;
     return settings;
   },
+  // Synchronous peek, so the common case can decline without calling suggest().
+  getCachedSettings: () => settings,
+  resolveOwn: (url) => deliveries.get(url),
   onCapture: (candidate) => start(candidate),
 });
 
@@ -198,11 +201,16 @@ async function handleMessage(message, sender) {
  * document and is backed by the OPFS file, so this does not load the file into
  * memory even for multi-gigabyte downloads.
  */
+/** Blob URL -> relative path, read back by the interceptor for our own downloads. */
+const deliveries = new Map();
+
 async function deliver({ id, blobUrl, filename, subfolder }) {
+  const path = joinPath(subfolder, filename);
+  deliveries.set(blobUrl, path);
   try {
     const downloadId = await chrome.downloads.download({
       url: blobUrl,
-      filename: joinPath(subfolder, filename),
+      filename: path,
       conflictAction: 'uniquify',
       saveAs: false,
     });
@@ -221,6 +229,7 @@ async function deliver({ id, blobUrl, filename, subfolder }) {
     broadcast();
     return { ok: false, error: String(error?.message || error) };
   } finally {
+    deliveries.delete(blobUrl);
     await sendToOffscreen(MSG.RELEASE_BLOB, { id, blobUrl }).catch(() => {});
   }
 }

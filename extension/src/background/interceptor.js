@@ -11,8 +11,27 @@ import { sanitizeFilename } from '../shared/filetypes.js';
  * Chrome to hold the download until suggest() is called, so a cold start no
  * longer silently hands every download back to Chrome.
  */
-export function registerInterceptor({ getSettings, onCapture }) {
+export function registerInterceptor({ getSettings, getCachedSettings, resolveOwn, onCapture }) {
   chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+    // Our own delivery download. The filename passed to chrome.downloads.download
+    // is only a suggestion and loses to this event, which is why finished files
+    // were landing as <uuid>.txt: a blob URL carries no name of its own. The
+    // name is asserted here instead, from the task that produced the blob.
+    if (item.byExtensionId === chrome.runtime.id) {
+      const own = resolveOwn(item.url);
+      if (own) {
+        suggest({ filename: own, conflictAction: 'uniquify' });
+        return false;
+      }
+      return false;
+    }
+
+    // Same reasoning for anything we are not going to capture: stay out of the
+    // way entirely rather than re-asserting a filename. The synchronous path
+    // needs settings in hand; a cold start falls through to the async one.
+    const cached = getCachedSettings();
+    if (cached && !evaluateWith(cached, item).capture) return false;
+
     let suggested = false;
     const finish = () => {
       if (suggested) return;
@@ -43,10 +62,12 @@ export function registerInterceptor({ getSettings, onCapture }) {
 
 async function evaluate(item, getSettings) {
   if (item.byExtensionId) return { capture: false, reason: 'other-extension' };
-
   const settings = await getSettings();
   if (!settings) return { capture: false, reason: 'no-settings' };
+  return evaluateWith(settings, item);
+}
 
+function evaluateWith(settings, item) {
   const url = item.finalUrl || item.url;
   const filename = pickFilename(item);
   const candidate = {

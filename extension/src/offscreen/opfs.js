@@ -20,15 +20,20 @@ export function partName(taskId, index) {
   return `${taskId}.${index}.part`;
 }
 
-/** Joins the segment files, in order, into one Blob. */
-export async function assemble(taskId, segmentCount) {
+/**
+ * Joins the segment files, in order, into one Blob.
+ *
+ * The MIME type matters: Chrome rewrites the extension of a downloaded blob to
+ * match its type, so an untyped blob turns "disk.iso" into "disk.txt".
+ */
+export async function assemble(taskId, segmentCount, type = 'application/octet-stream') {
   const handle = await dir();
   const parts = [];
   for (let index = 0; index < segmentCount; index += 1) {
     const file = await handle.getFileHandle(partName(taskId, index), { create: false });
     parts.push(await file.getFile());
   }
-  return new Blob(parts);
+  return new Blob(parts, { type: type || 'application/octet-stream' });
 }
 
 /** Bytes already on disk per segment, used to resume a paused download. */

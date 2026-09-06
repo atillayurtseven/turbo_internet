@@ -53,6 +53,12 @@ Store, PDF görüntüleyici) soru sorulmaz ve indirme Chrome'da kalır.
 
 Ayarlardan "her zaman devral" veya "asla devralma" seçilebilir.
 
+## Doğrulama
+Uçtan uca test, Chrome'u `--load-extension` ile başlatıp CDP üzerinden konsolu okuyarak
+yapıldı (`--disable-features=DisableLoadExtensionCommandLineSwitch` gerekiyor; Chrome 137+
+bu anahtarı varsayılan olarak kapatıyor). 10 MB'lık bir dosya 4 parça hâlinde indirildi;
+sonucun SHA-256'sı sunucudaki dosyayla birebir aynı çıktı.
+
 ## Bilinen sınırlar
 - Tek bağlantıya düşen (Range desteklemeyen) sunucularda dosya 1 GB'ı geçemez.
 - Dosya diske yazılana kadar tarayıcı depolamasında bir kopyası durur; 6 GB'lık bir ISO

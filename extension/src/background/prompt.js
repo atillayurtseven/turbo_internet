@@ -13,33 +13,54 @@ export const CHOICE_CHROME = 'chrome';
  * prompt must never strand the download.
  */
 export async function askUser({ filename, sizeBytes, seconds = 20 }) {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    if (!tab?.id) return CHOICE_CHROME;
+  const args = [
+    {
+      title: t('prompt.title'),
+      question: t('prompt.question'),
+      filename,
+      size: sizeBytes > 0 ? formatBytes(sizeBytes) : '',
+      yes: t('prompt.yes'),
+      no: t('prompt.no'),
+      countdown: t('prompt.countdown'),
+      seconds,
+      manager: CHOICE_MANAGER,
+      chrome: CHOICE_CHROME,
+    },
+  ];
 
-    const [injection] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: overlay,
-      args: [
-        {
-          title: t('prompt.title'),
-          question: t('prompt.question'),
-          filename,
-          size: sizeBytes > 0 ? formatBytes(sizeBytes) : '',
-          yes: t('prompt.yes'),
-          no: t('prompt.no'),
-          countdown: t('prompt.countdown'),
-          seconds,
-          manager: CHOICE_MANAGER,
-          chrome: CHOICE_CHROME,
-        },
-      ],
-    });
-    return injection?.result ?? CHOICE_CHROME;
-  } catch (error) {
-    // Restricted pages (chrome://, the Web Store, PDF viewer) reject injection.
-    console.warn('[dlman] could not ask, leaving it to Chrome', error?.message || error);
-    return CHOICE_CHROME;
+  // The tab that started the download can be mid-navigation or be a restricted
+  // page, so the question is offered to the next best tab instead of dropped.
+  for (const tabId of await candidateTabs()) {
+    try {
+      const [injection] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: overlay,
+        args,
+      });
+      if (injection?.result) return injection.result;
+    } catch (error) {
+      console.debug('[dlman] cannot ask in tab', tabId, error?.message || error);
+    }
+  }
+
+  console.warn('[dlman] nowhere to ask, leaving the download to Chrome');
+  return CHOICE_CHROME;
+}
+
+/** Injectable tabs, most likely first: the active one, then most recent. */
+async function candidateTabs() {
+  try {
+    const tabs = await chrome.tabs.query({ lastFocusedWindow: true });
+    return tabs
+      .filter((tab) => tab.id >= 0 && /^https?:/i.test(tab.url || ''))
+      .sort(
+        (a, b) =>
+          Number(b.active) - Number(a.active) || (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0),
+      )
+      .slice(0, 3)
+      .map((tab) => tab.id);
+  } catch {
+    return [];
   }
 }
 

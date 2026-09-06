@@ -1,12 +1,17 @@
 import { MSG } from '../shared/constants.js';
-import { loadSettings } from '../shared/settings.js';
+import { DEFAULT_SETTINGS } from '../shared/settings.js';
 import { Engine } from './engine.js';
 
+/**
+ * Offscreen documents only get chrome.runtime — chrome.storage is undefined
+ * here, so settings cannot be read directly. They arrive from the service
+ * worker instead: every message that needs them carries a copy, and defaults
+ * cover the window before the first one lands.
+ */
 console.info('[dlman/offscreen] document loaded');
 
-const ready = (async () => new Engine(await loadSettings()))();
+const engine = new Engine(DEFAULT_SETTINGS);
 
-// A crash here would otherwise look like a download that simply never starts.
 self.addEventListener('error', (event) => console.error('[dlman/offscreen] uncaught', event.message));
 self.addEventListener('unhandledrejection', (event) =>
   console.error('[dlman/offscreen] unhandled rejection', event.reason),
@@ -22,8 +27,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handle({ type, payload }) {
-  const engine = await ready;
-
   switch (type) {
     case MSG.ENQUEUE:
       if (payload.settings) engine.applySettings(payload.settings);

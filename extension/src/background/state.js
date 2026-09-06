@@ -1,4 +1,4 @@
-import { MAX_HISTORY, TERMINAL_STATUSES } from '../shared/constants.js';
+import { MAX_HISTORY, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
 
 const KEY = 'tasks';
 
