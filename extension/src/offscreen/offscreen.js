@@ -2,7 +2,15 @@ import { MSG } from '../shared/constants.js';
 import { loadSettings } from '../shared/settings.js';
 import { Engine } from './engine.js';
 
+console.info('[dlman/offscreen] document loaded');
+
 const ready = (async () => new Engine(await loadSettings()))();
+
+// A crash here would otherwise look like a download that simply never starts.
+self.addEventListener('error', (event) => console.error('[dlman/offscreen] uncaught', event.message));
+self.addEventListener('unhandledrejection', (event) =>
+  console.error('[dlman/offscreen] unhandled rejection', event.reason),
+);
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.target !== 'offscreen') return false;

@@ -1,4 +1,4 @@
-import { MAX_HISTORY, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
+import { MAX_HISTORY, TERMINAL_STATUSES } from '../shared/constants.js';
 
 const KEY = 'tasks';
 
@@ -48,8 +48,8 @@ export async function remove(id) {
   return tasks;
 }
 
-export async function clearCompleted() {
-  tasks = tasks.filter((task) => task.status !== STATUS.COMPLETED);
+export async function clearCompleted(all = false) {
+  tasks = all ? [] : tasks.filter((task) => !TERMINAL_STATUSES.has(task.status));
   await persist();
   return tasks;
 }

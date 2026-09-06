@@ -30,6 +30,11 @@ async function start(payload) {
   segments = payload.segments.map((segment) => ({ ...segment }));
   controller = new AbortController();
 
+  console.info('[dlman/worker] start', config.id, {
+    segments: segments.length,
+    totalBytes: config.totalBytes,
+    rangeSupported: config.rangeSupported,
+  });
   accessHandle = await openHandle(config.id);
   if (config.totalBytes > 0) accessHandle.truncate(config.totalBytes);
 

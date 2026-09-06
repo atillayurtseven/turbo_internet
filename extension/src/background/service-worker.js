@@ -1,4 +1,4 @@
-import { ACTIVE_STATUSES, MSG, STATUS } from '../shared/constants.js';
+import { ACTIVE_STATUSES, MSG, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
 import { loadSettings, onSettingsChanged } from '../shared/settings.js';
 import { joinPath } from '../shared/filetypes.js';
 import { initI18n, t } from '../shared/i18n.js';
@@ -45,6 +45,15 @@ registerInterceptor({
 /** Queues a download and hands it to the engine. */
 async function start(candidate) {
   await ready;
+
+  const duplicate = state
+    .getTasks()
+    .find((task) => task.url === candidate.url && !TERMINAL_STATUSES.has(task.status));
+  if (duplicate) {
+    console.info('[dlman] already queued, ignoring duplicate', candidate.filename);
+    return duplicate;
+  }
+
   const task = createTask(candidate);
   await state.upsert(task);
   broadcast();
@@ -130,9 +139,20 @@ async function handleMessage(message, sender) {
       return { ok: true, tasks: state.getTasks(), settings };
 
     case MSG.PAUSE:
-    case MSG.CANCEL:
-      await sendToOffscreen(type, payload);
+    case MSG.CANCEL: {
+      // Best effort: the user must be able to stop a download even when the
+      // engine is wedged, so local state is updated either way.
+      await sendToOffscreen(type, payload).catch((error) =>
+        console.warn('[dlman] engine unreachable, stopping locally', error?.message || error),
+      );
+      await state.upsert({
+        id: payload?.id,
+        status: type === MSG.PAUSE ? STATUS.PAUSED : STATUS.CANCELED,
+        speed: 0,
+      });
+      broadcast();
       return { ok: true };
+    }
 
     case MSG.RESUME:
     case MSG.RETRY: {
@@ -149,7 +169,7 @@ async function handleMessage(message, sender) {
       return { ok: true };
 
     case MSG.CLEAR_COMPLETED:
-      await state.clearCompleted();
+      await state.clearCompleted(payload?.all === true);
       broadcast();
       return { ok: true };
 

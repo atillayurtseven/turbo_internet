@@ -15,8 +15,9 @@ async function init() {
   applyI18n();
 
   document.getElementById('settings').addEventListener('click', () => chrome.runtime.openOptionsPage());
-  document.getElementById('clear').addEventListener('click', async () => {
-    await send(MSG.CLEAR_COMPLETED);
+  // Shift-click wipes the whole list, stuck entries included.
+  document.getElementById('clear').addEventListener('click', async (event) => {
+    await send(MSG.CLEAR_COMPLETED, { all: event.shiftKey });
   });
 
   chrome.runtime.onMessage.addListener((message) => {
@@ -125,6 +126,7 @@ function actions(task) {
   const add = (labelKey, type, primary) => {
     const button = document.createElement('button');
     button.textContent = t(labelKey);
+    button.dataset.action = type;
     if (primary) button.className = 'primary';
     button.addEventListener('click', () => send(type, { id: task.id }));
     buttons.push(button);
@@ -150,7 +152,11 @@ function actions(task) {
       add('action.remove', MSG.REMOVE);
       break;
     default:
-      add('action.remove', MSG.REMOVE);
+      break;
+  }
+  // Always available: a wedged task must never be impossible to get rid of.
+  if (!buttons.some((button) => button.dataset.action === MSG.REMOVE)) {
+    add('action.remove', MSG.REMOVE);
   }
   return buttons;
 }

@@ -146,6 +146,10 @@ export class Engine {
       task.mime = task.mime || result.mime;
       if (result.filename) task.filename = sanitizeFilename(result.filename);
       task.rangeSupported = result.rangeSupported;
+      console.info('[dlman/engine] probe', task.filename, {
+        totalBytes: result.totalBytes,
+        rangeSupported: result.rangeSupported,
+      });
 
       if (!result.rangeSupported && !this.#settings.fallbackSingleConnection) {
         throw new Error('range-unsupported');
@@ -167,11 +171,13 @@ export class Engine {
   }
 
   #spawn(task) {
+    console.info('[dlman/engine] spawning worker', task.filename, `${task.segments.length} segments`);
     const worker = new Worker(new URL('./segment-worker.js', import.meta.url), { type: 'module' });
     this.#workers.set(task.id, worker);
 
     worker.onmessage = (event) => this.#onWorkerMessage(task.id, event.data);
     worker.onerror = (event) => {
+      console.error('[dlman/engine] worker failed to load', event.message, event.filename);
       this.#fail(this.#tasks.get(task.id), new Error(event.message || 'worker-error'));
       this.#terminate(task.id);
     };
@@ -228,6 +234,7 @@ export class Engine {
         break;
 
       case 'error':
+        console.error('[dlman/engine] worker error', task.filename, message.message);
         task.segments = message.segments ?? task.segments;
         this.#terminate(id);
         this.#fail(task, new Error(message.message), message);
@@ -303,6 +310,7 @@ export class Engine {
   }
 
   #setStatus(task, status) {
+    console.info('[dlman/engine]', task.filename, task.status, '->', status);
     task.status = status;
     if (TERMINAL_STATUSES.has(status)) task.speed = 0;
     this.#push();
