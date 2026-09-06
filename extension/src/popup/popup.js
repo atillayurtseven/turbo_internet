@@ -90,8 +90,8 @@ function infoParts(task) {
     add(t(`status.${task.status}`));
   }
 
+  // The segment count is already visible in the progress bar itself.
   if (task.status === STATUS.COMPLETED) add(t('status.completed'), 'chip ok');
-  else if (task.connections > 1) add(t('popup.segments', { n: task.connections }), 'chip seg');
   else if (task.rangeSupported === false) {
     add(t('popup.singleConnection'), 'chip');
     add(t('popup.noRangeSupport'), 'warn');
