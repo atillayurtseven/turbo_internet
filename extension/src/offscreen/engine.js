@@ -302,6 +302,9 @@ export class Engine {
     if (response?.ok) {
       task.completedAt = Date.now();
       task.speed = 0;
+      // Carried back so the snapshot below does not wipe it; "show in folder"
+      // needs this id.
+      task.chromeDownloadId = response.downloadId ?? 0;
       task.status = STATUS.COMPLETED;
       this.#pushNow();
       this.#tasks.delete(task.id);

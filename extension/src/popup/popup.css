@@ -28,6 +28,14 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
 .filename { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .info { font-size: 11px; color: var(--dim); display: flex; gap: 7px; flex-wrap: wrap; }
 .info .chip { border: 1px solid var(--line); border-radius: 20px; padding: 0 6px; font-size: 10px; }
+/* Small filled dot between plain items; chips already read as separate. */
+.info > span + span:not(.chip)::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 3px; border-radius: 50%;
+  background: currentColor; opacity: .45;
+  margin-right: 7px; vertical-align: middle;
+}
 .info .chip.seg { border-color: #2c4b7a; color: #8ab4ff; }
 .info .chip.ok { border-color: #2c5c46; color: var(--ok); }
 .info .warn { color: var(--warn); }

@@ -24,7 +24,12 @@ async function persist() {
 /** Replaces the mirror with a snapshot coming from the offscreen engine. */
 export async function replaceState(snapshot) {
   const live = new Map(snapshot.map((task) => [task.id, task]));
-  const merged = tasks.map((task) => live.get(task.id) ?? task);
+  // Merged, not replaced: the engine does not know about fields this side owns,
+  // such as the Chrome download id assigned at delivery.
+  const merged = tasks.map((task) => {
+    const update = live.get(task.id);
+    return update ? { ...task, ...update } : task;
+  });
   for (const task of snapshot) {
     if (!merged.some((existing) => existing.id === task.id)) merged.push(task);
   }
