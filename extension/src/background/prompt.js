@@ -71,13 +71,14 @@ async function candidateTabs() {
 function overlay(s) {
   return new Promise((resolve) => {
     const host = document.createElement('div');
+    // `all` must come first: as the last declaration it would reset the
+    // positioning above it and drop the card to the bottom of the document.
     host.style.cssText =
-      'position:fixed;top:16px;right:16px;z-index:2147483647;all:initial;';
+      'all:initial;position:fixed;top:16px;right:16px;z-index:2147483647;pointer-events:auto;';
     const root = host.attachShadow({ mode: 'closed' });
 
     root.innerHTML = `
       <style>
-        :host { all: initial; }
         .card {
           width: 320px; box-sizing: border-box; padding: 14px 16px;
           font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -148,6 +149,6 @@ function overlay(s) {
       done(s.chrome);
     });
 
-    document.documentElement.append(host);
+    (document.body ?? document.documentElement).append(host);
   });
 }
