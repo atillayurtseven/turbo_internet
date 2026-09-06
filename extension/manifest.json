@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "version": "0.1.0",
+  "description": "__MSG_extDesc__",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "downloads",
+    "storage",
+    "unlimitedStorage",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Download Manager"
+  },
+  "options_page": "src/options/options.html",
+  "default_locale": "en",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/locales/*.json"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

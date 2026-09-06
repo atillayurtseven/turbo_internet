@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title data-i18n="options.title"></title>
+    <link rel="stylesheet" href="../shared/ui.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 data-i18n="options.title"></h1>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="types" data-i18n="options.tab.fileTypes"></button>
+        <button class="tab" data-tab="general" data-i18n="options.tab.general"></button>
+      </nav>
+
+      <section id="types" class="panel">
+        <h2 data-i18n="options.rules.heading"></h2>
+        <p class="hint" data-i18n="options.rules.desc"></p>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="options.rules.col.match"></th>
+              <th data-i18n="options.rules.col.capture"></th>
+              <th data-i18n="options.rules.col.connections"></th>
+              <th data-i18n="options.rules.col.minSize"></th>
+              <th data-i18n="options.rules.col.folder"></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rules"></tbody>
+        </table>
+        <button id="add-rule" data-i18n="options.rules.addRule"></button>
+      </section>
+
+      <section id="general" class="panel" hidden></section>
+
+      <footer class="bar">
+        <button id="save" class="primary" data-i18n="action.save"></button>
+        <button id="reset" data-i18n="action.reset"></button>
+        <span id="saved" class="saved" hidden data-i18n="options.saved"></span>
+      </footer>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+{
+  "extName":  { "message": "İndirme Yöneticisi" },
+  "extDesc":  { "message": "Dosya tipi tanıyan, kural bazlı parçalı (çoklu bağlantı) indirme yöneticisi." }
+}

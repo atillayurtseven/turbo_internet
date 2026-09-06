@@ -1,0 +1,55 @@
+body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.logo {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: linear-gradient(135deg, var(--acc), #8b5cf6);
+  display: grid; place-items: center; font-size: 14px; color: #fff;
+}
+.titles { min-width: 0; }
+.name { font-weight: 600; }
+.tagline { font-size: 11px; color: var(--dim); }
+.icon { margin-left: auto; background: none; }
+
+.list { overflow-y: auto; flex: 1; }
+.empty { padding: 32px 14px; text-align: center; color: var(--dim); }
+
+.dl { padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.head { display: flex; align-items: center; gap: 9px; }
+.badge {
+  width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  font-size: 9px; font-weight: 700; letter-spacing: .3px;
+  background: var(--panel-2); color: var(--dim);
+}
+.meta { min-width: 0; flex: 1; }
+.filename { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info { font-size: 11px; color: var(--dim); display: flex; gap: 7px; flex-wrap: wrap; }
+.info .chip { border: 1px solid var(--line); border-radius: 20px; padding: 0 6px; font-size: 10px; }
+.info .chip.seg { border-color: #2c4b7a; color: #8ab4ff; }
+.info .chip.ok { border-color: #2c5c46; color: var(--ok); }
+.info .warn { color: var(--warn); }
+.info .err { color: var(--err); }
+
+.bar { height: 6px; background: #242935; border-radius: 6px; margin-top: 9px; overflow: hidden; display: flex; }
+.bar .seg { height: 100%; border-right: 1px solid var(--panel); }
+.bar .seg:last-child { border-right: 0; }
+.bar .seg > i { display: block; height: 100%; background: var(--acc); }
+.bar .seg.done > i { background: var(--ok); }
+.status-error .bar .seg > i { background: var(--err); }
+.status-paused .bar .seg > i { background: var(--dim); }
+
+.actions { display: flex; gap: 6px; margin-top: 9px; }
+
+.foot {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; background: var(--panel-2);
+  font-size: 11px; color: var(--dim); border-top: 1px solid var(--line);
+}
+.foot button { margin-left: auto; }
