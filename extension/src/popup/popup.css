@@ -33,7 +33,7 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
 .info .warn { color: var(--warn); }
 .info .err { color: var(--err); }
 
-.bar { height: 6px; background: #242935; border-radius: 6px; margin-top: 9px; overflow: hidden; display: flex; }
+.bar { height: 6px; background: var(--track); border-radius: 6px; margin-top: 9px; overflow: hidden; display: flex; }
 .bar .seg { height: 100%; border-right: 1px solid var(--panel); }
 .bar .seg:last-child { border-right: 0; }
 .bar .seg > i { display: block; height: 100%; background: var(--acc); }

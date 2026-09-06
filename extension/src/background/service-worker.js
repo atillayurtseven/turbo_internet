@@ -48,7 +48,17 @@ async function start(candidate) {
   const task = createTask(candidate);
   await state.upsert(task);
   broadcast();
-  await sendToOffscreen(MSG.ENQUEUE, { task, settings });
+  try {
+    await sendToOffscreen(MSG.ENQUEUE, { task, settings });
+  } catch (error) {
+    // Without this the task sits in the queue forever with no explanation.
+    await state.upsert({
+      id: task.id,
+      status: STATUS.ERROR,
+      error: `engine unreachable: ${error?.message || error}`,
+    });
+    broadcast();
+  }
   return task;
 }
 
@@ -251,8 +261,21 @@ function updateBadge() {
   chrome.action.setBadgeBackgroundColor({ color: '#4f6bff' });
 }
 
-// Keep the engine warm while there is unfinished work.
+/**
+ * Hands any unfinished work back to the engine. Tasks can be left queued when
+ * the service worker is torn down between accepting a download and reaching
+ * the offscreen document; the engine ignores ids it already knows.
+ */
 ready.then(async () => {
-  const hasWork = state.getTasks().some((task) => task.status === STATUS.DOWNLOADING);
-  if (hasWork) await ensureOffscreen();
+  const pending = state
+    .getTasks()
+    .filter((task) => task.status === STATUS.QUEUED || task.status === STATUS.DOWNLOADING);
+  if (pending.length === 0) return;
+
+  await ensureOffscreen();
+  for (const task of pending) {
+    await sendToOffscreen(MSG.ENQUEUE, { task, settings }).catch((error) =>
+      console.error('[dlman] could not resume', task.filename, error),
+    );
+  }
 });

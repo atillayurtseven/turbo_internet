@@ -9,6 +9,9 @@
   --ok: #3ddc97;
   --warn: #ffb020;
   --err: #ff5c5c;
+  --track: #242935;
+  --primary-bg: #1b2740;
+  --primary-line: #33507e;
 }
 
 @media (prefers-color-scheme: light) {
@@ -19,6 +22,9 @@
     --line: #dfe3ea;
     --txt: #16191f;
     --dim: #656d7a;
+    --track: #e3e7ee;
+    --primary-bg: #e8f0ff;
+    --primary-line: #b7cfff;
   }
 }
 
@@ -43,7 +49,7 @@ button {
 }
 
 button:hover { color: var(--txt); }
-button.primary { color: var(--txt); border-color: #33507e; background: #1b2740; }
+button.primary { color: var(--txt); border-color: var(--primary-line); background: var(--primary-bg); }
 
 input, select {
   font: inherit;
