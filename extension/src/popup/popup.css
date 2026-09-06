@@ -7,11 +7,7 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
 }
-.logo {
-  width: 26px; height: 26px; border-radius: 7px;
-  background: linear-gradient(135deg, var(--acc), #8b5cf6);
-  display: grid; place-items: center; font-size: 14px; color: #fff;
-}
+.logo { width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto; }
 .titles { min-width: 0; }
 .name { font-weight: 600; }
 .tagline { font-size: 11px; color: var(--dim); }
