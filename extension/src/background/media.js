@@ -19,7 +19,9 @@ const PLAYLIST_TYPES = [
   'audio/x-mpegurl',
 ];
 
-const MIN_DIRECT_BYTES = 1024 * 1024;
+// A single stream segment is often a megabyte or two, so the bar for calling
+// something a complete file has to sit well above that.
+const MIN_DIRECT_BYTES = 8 * 1024 * 1024;
 const MAX_PER_TAB = 25;
 // Entries go stale: a player re-requests playlists constantly, and a list that
 // never empties keeps offering URLs the page has long since stopped using.
@@ -27,6 +29,8 @@ const TTL_MS = 10 * 60 * 1000;
 
 /** tabId -> Map(url -> item) */
 const perTab = new Map();
+/** Tabs where a playlist was seen; their media requests are stream fragments. */
+const streaming = new Set();
 
 export function registerMediaSniffer(onChange) {
   chrome.webRequest.onHeadersReceived.addListener(
@@ -42,10 +46,14 @@ export function registerMediaSniffer(onChange) {
   chrome.webNavigation?.onCommitted.addListener((details) => {
     if (details.frameId === 0) {
       perTab.delete(details.tabId);
+      streaming.delete(details.tabId);
       onChange(details.tabId);
     }
   });
-  chrome.tabs.onRemoved.addListener((tabId) => perTab.delete(tabId));
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    perTab.delete(tabId);
+    streaming.delete(tabId);
+  });
 }
 
 export function mediaFor(tabId) {
@@ -60,6 +68,7 @@ export function mediaFor(tabId) {
 
 export function clearMedia(tabId) {
   perTab.delete(tabId);
+  streaming.delete(tabId);
 }
 
 function classify(details) {
@@ -74,14 +83,18 @@ function classify(details) {
   const path = pathOf(url);
 
   if (path.endsWith('.m3u8') || PLAYLIST_TYPES.includes(type)) {
+    streaming.add(details.tabId);
     return { url, kind: 'hls', label: 'HLS', name: nameFor(url, 'stream'), bytes: 0 };
   }
   if (path.endsWith('.mpd') || type === 'application/dash+xml') {
+    streaming.add(details.tabId);
     // Detected so the user is not left wondering; DASH needs muxing we do not do.
     return { url, kind: 'dash', label: 'DASH', name: nameFor(url, 'stream'), bytes: 0, unsupported: true };
   }
-  // Progressive files only when they are big enough to be the actual media and
-  // not one segment of a stream.
+  // Progressive files only. Once a playlist has been seen on this tab, every
+  // media response is a piece of that stream: offering one on its own produced
+  // a headerless file that no player could open.
+  if (streaming.has(details.tabId)) return null;
   if (/^video\/|^audio\//.test(type) && length >= MIN_DIRECT_BYTES && !isSegment(path)) {
     return { url, kind: 'file', label: type.split('/')[1].toUpperCase(), name: nameFor(url, 'video'), bytes: length };
   }

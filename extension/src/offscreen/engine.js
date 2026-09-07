@@ -505,6 +505,8 @@ export class Engine {
     // A stream's size is only known once every segment is in.
     if (task.totalBytes === 0) task.totalBytes = blob.size;
 
+    await assertPlayable(task, blob);
+
     // The Blob references the part files on disk; it is not read into memory.
     const blobUrl = URL.createObjectURL(blob);
     this.#blobs.set(task.id, blobUrl);
@@ -616,3 +618,21 @@ function withExtension(filename, container) {
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Refuses to deliver an MP4 that has no header.
+ *
+ * A single stream fragment starts with `moof` or `styp` instead of `ftyp`: it
+ * is a slice of a video, not a video, and saving it produced a file nothing
+ * could open. Better to fail loudly than to hand over something broken.
+ */
+async function assertPlayable(task, blob) {
+  if (!/\.(mp4|m4v|mov)$/i.test(task.filename)) return;
+  const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+  if (head.byteLength < 8) throw new Error('file is too short to be a video');
+
+  const type = String.fromCharCode(head[4], head[5], head[6], head[7]);
+  if (type === 'moof' || type === 'styp') {
+    throw new Error('this is one fragment of a stream, not a complete video');
+  }
+}
