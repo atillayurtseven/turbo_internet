@@ -78,10 +78,11 @@ function renderRuleRow(rule) {
 
   const connections = document.createElement('td');
   connections.className = 'narrow';
-  connections.append(
-    numberInput(rule.connections, 1, 32, (value) => { rule.connections = value; },
-      `${label}: ${t('options.rules.col.connections')}`),
-  );
+  const connectionsInput = numberInput(rule.connections, 1, 32, (value) => {
+    rule.connections = value;
+  }, `${label}: ${t('options.rules.col.connections')}`);
+  connectionsInput.title = t('options.rules.connectionsHelp');
+  connections.append(connectionsInput);
 
   const minSize = document.createElement('td');
   minSize.className = 'narrow';

@@ -14,6 +14,7 @@ let segments = [];
 let progressTimer = 0;
 let running = false;
 let nextIndex = 0;
+let queue = [];
 
 /**
  * Work stealing. A connection that finishes early would otherwise idle while
@@ -60,12 +61,16 @@ async function start(payload) {
   });
 
   nextIndex = Math.max(...segments.map((segment) => segment.index)) + 1;
+  queue = segments.slice();
   const limiter = createLimiter(config.speedLimit);
   progressTimer = setInterval(reportProgress, PROGRESS_INTERVAL_MS);
 
   try {
-    // One lane per planned segment; a lane picks up stolen work when it frees up.
-    await Promise.all(segments.map((segment) => runLane(segment, limiter)));
+    // As many lanes as the rule asks for, not as many as there are parts: a
+    // 10 GB file needs at least ten parts to stay under the per-file storage
+    // limit, but that is no reason to open ten connections.
+    const lanes = Math.max(1, Math.min(config.connections ?? segments.length, segments.length));
+    await Promise.all(Array.from({ length: lanes }, () => runLane(limiter)));
     closeHandles();
     clearInterval(progressTimer);
     reportProgress();
@@ -84,12 +89,13 @@ async function stop() {
   controller?.abort();
 }
 
-async function runLane(segment, limiter) {
-  let current = segment;
-  while (current) {
+async function runLane(limiter) {
+  while (true) {
+    // Planned work first, then whatever can be taken off a slower lane.
+    const current = queue.shift() ?? (config.rangeSupported ? await steal() : null);
+    if (!current) return;
     await runSegment(current, limiter);
     current.done = true;
-    current = config.rangeSupported ? await steal() : null;
   }
 }
 
@@ -180,6 +186,11 @@ async function fetchSegment(segment, limiter) {
   const headers = {};
   if (config.rangeSupported) {
     headers.Range = segment.end === null ? `bytes=${from}-` : `bytes=${from}-${segment.end}`;
+    // If the file behind this URL is no longer the one we measured -- a mirror
+    // serving another build, or a rebuilt nightly -- the server answers 200
+    // instead of 206 and the check below turns that into a clean failure,
+    // rather than a file stitched together from two different versions.
+    if (config.validator) headers['If-Range'] = config.validator;
   }
 
   const response = await fetch(config.url, {
@@ -194,7 +205,11 @@ async function fetchSegment(segment, limiter) {
 
   if (!response.ok) throw new HttpError(response.status);
   // A server that ignores Range would restart the body and corrupt the part.
-  if (config.rangeSupported && response.status !== 206) throw new HttpError(response.status);
+  if (config.rangeSupported && response.status !== 206) {
+    // 200 here means the server declined the range, which after If-Range means
+    // the file is not the one the download started from.
+    throw new Error(response.status === 200 ? 'file-changed' : `HTTP ${response.status}`);
+  }
   if (!response.body) throw new Error('empty response body');
 
   const reader = response.body.getReader();

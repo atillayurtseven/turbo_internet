@@ -21,6 +21,31 @@ export function partName(taskId, index) {
 }
 
 /**
+ * Checks every part against the range it was supposed to hold.
+ *
+ * The total can come out right while individual parts are wrong, and that is
+ * exactly the case that produced a complete-looking but unusable file. Sizes
+ * are compared before anything is joined.
+ */
+export async function verifyParts(prefix, segments) {
+  const handle = await dir();
+  const problems = [];
+  for (const segment of segments) {
+    if (segment.end === null) continue;
+    const expected = segment.end - segment.start + 1;
+    let actual = -1;
+    try {
+      const file = await handle.getFileHandle(partName(prefix, segment.index), { create: false });
+      actual = (await file.getFile()).size;
+    } catch {
+      actual = -1;
+    }
+    if (actual !== expected) problems.push(`${segment.index}:${actual}/${expected}`);
+  }
+  return problems;
+}
+
+/**
  * Joins the segment files, in order, into one Blob.
  *
  * The MIME type matters: Chrome rewrites the extension of a downloaded blob to

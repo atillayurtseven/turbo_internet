@@ -35,7 +35,7 @@
   "options.rules.desc": "The first matching rule wins. Downloads that match no rule are left to Chrome.",
   "options.rules.col.match": "Extensions / MIME",
   "options.rules.col.capture": "Capture",
-  "options.rules.col.connections": "Segments",
+  "options.rules.col.connections": "Connections",
   "options.rules.col.minSize": "Min. size",
   "options.rules.col.folder": "Subfolder",
   "options.rules.col.actions": "",
@@ -106,5 +106,8 @@
   "error.rangeUnsupported": "The server does not allow multiple connections",
   "error.engineUnreachable": "The download engine could not be reached",
   "error.deliveryLost": "The saved file could not be found; try again",
-  "warning.awaitingConfirmation": "Chrome is waiting for you to allow this file"
+  "warning.awaitingConfirmation": "Chrome is waiting for you to allow this file",
+  "options.rules.connectionsHelp": "Parallel connections. A large file may use more, because each part is capped in size.",
+  "error.partMismatch": "Some pieces came out the wrong size; the file would be corrupt",
+  "error.fileChanged": "The file on the server changed while downloading; start again"
 }

@@ -40,6 +40,10 @@ export async function probe(url, { referrer = '', signal } = {}) {
 
     return {
       url: response.url || url,
+      // Identifies this exact version of the file. Sent back with every range
+      // request so a mirror serving a different build cannot be stitched into
+      // the middle of the download.
+      validator: response.headers.get('etag') || response.headers.get('last-modified') || '',
       rangeSupported,
       totalBytes: Number.isFinite(totalBytes) && totalBytes > 0 ? totalBytes : 0,
       mime: (response.headers.get('content-type') || '').split(';')[0].trim(),

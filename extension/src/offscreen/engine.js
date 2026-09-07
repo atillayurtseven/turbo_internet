@@ -15,6 +15,7 @@ import {
   MAX_PART_BYTES,
   assemble,
   deleteParts,
+  verifyParts,
   pruneOrphans,
   quota,
   requestPersistence,
@@ -191,6 +192,7 @@ export class Engine {
       // The original URL is kept: it is what the duplicate guards match on,
       // and overwriting it here let a redirected file be downloaded twice.
       task.resolvedUrl = result.url;
+      task.validator = result.validator || '';
       task.totalBytes = result.totalBytes || task.totalBytes;
       task.mime = task.mime || result.mime;
       if (result.filename) task.filename = sanitizeFilename(result.filename);
@@ -228,7 +230,9 @@ export class Engine {
             )
           : 1;
       task.segments = planSegments(task.totalBytes, count);
-      task.connections = task.segments.length;
+      // connections stays the user's setting. It used to be overwritten with the
+      // part count, so a large file quietly opened more connections than asked:
+      // parts are capped in size for storage reasons, which is a separate thing.
     } finally {
       this.#probes.delete(task.id);
     }
@@ -377,6 +381,8 @@ export class Engine {
         referrer: task.referrer,
         totalBytes: task.totalBytes,
         rangeSupported: Boolean(task.rangeSupported),
+        validator: task.validator || '',
+        connections: Math.max(1, task.connections || 1),
         segments: task.segments,
         retries: this.#settings.segmentRetries,
         backoffMs: this.#settings.retryBackoffMs,
@@ -500,7 +506,19 @@ export class Engine {
 
   async #finish(task) {
     this.#setStatus(task, STATUS.ASSEMBLING);
-    const blob = await assemble(task.partPrefix ?? task.id, task.segments, task.mime);
+
+    const prefix = task.partPrefix ?? task.id;
+    // Only byte-range downloads: a stream's segment bounds are playlist indices,
+    // not offsets, so there is no expected size to compare against.
+    if (task.kind !== KIND.HLS && task.rangeSupported) {
+      const problems = await verifyParts(prefix, task.segments);
+      if (problems.length > 0) {
+        console.error('[dlman/engine] part size mismatch', task.filename, problems);
+        throw new Error(`part-mismatch: ${problems.slice(0, 4).join(' ')}`);
+      }
+    }
+
+    const blob = await assemble(prefix, task.segments, task.mime);
 
     if (task.totalBytes > 0 && blob.size !== task.totalBytes) {
       throw new Error(`size mismatch: got ${blob.size}, expected ${task.totalBytes}`);

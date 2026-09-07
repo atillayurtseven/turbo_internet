@@ -296,7 +296,11 @@ function infoParts(task) {
     if (task.speed > 0 && task.totalBytes > 0) {
       add(formatEta((task.totalBytes - task.receivedBytes) / task.speed));
     }
-  } else if (task.status !== STATUS.COMPLETED) {
+    // Shown as plain text, not a badge: the real count can differ from the rule
+    // (parts are capped in size, and a finished connection may split another),
+    // so leaving it invisible made the setting look like it was ignored.
+    if (task.segments?.length > 1) add(t('popup.segments', { n: task.segments.length }));
+  } else {
     add(t(`status.${task.status}`));
   }
 
@@ -325,6 +329,8 @@ const ERROR_TEXT = new Map([
   ['too-short', 'error.tooShort'],
   ['range-unsupported', 'error.rangeUnsupported'],
   ['delivery-lost', 'error.deliveryLost'],
+  ['part-mismatch', 'error.partMismatch'],
+  ['file-changed', 'error.fileChanged'],
 ]);
 
 function describeError(error) {

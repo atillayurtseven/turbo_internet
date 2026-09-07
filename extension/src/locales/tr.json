@@ -35,7 +35,7 @@
   "options.rules.desc": "Eşleşen ilk kural uygulanır. Hiçbir kurala uymayan indirmeler Chrome'a bırakılır.",
   "options.rules.col.match": "Uzantı / MIME",
   "options.rules.col.capture": "Yakala",
-  "options.rules.col.connections": "Parça",
+  "options.rules.col.connections": "Bağlantı",
   "options.rules.col.minSize": "Min. boyut",
   "options.rules.col.folder": "Alt klasör",
   "options.rules.col.actions": "",
@@ -106,5 +106,8 @@
   "error.rangeUnsupported": "Sunucu çoklu bağlantıya izin vermiyor",
   "error.engineUnreachable": "İndirme motoruna ulaşılamadı",
   "error.deliveryLost": "Kaydedilen dosya bulunamadı; yeniden dene",
-  "warning.awaitingConfirmation": "Chrome dosyayı onaylamanı bekliyor"
+  "warning.awaitingConfirmation": "Chrome dosyayı onaylamanı bekliyor",
+  "options.rules.connectionsHelp": "Paralel bağlantı sayısı. Büyük dosyalarda daha fazlası kullanılabilir, çünkü her parçanın boyutu sınırlı.",
+  "error.partMismatch": "Bazı parçalar yanlış boyutta geldi; dosya bozuk olurdu",
+  "error.fileChanged": "Dosya indirme sırasında sunucuda değişti; baştan başla"
 }
