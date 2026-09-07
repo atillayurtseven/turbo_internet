@@ -55,6 +55,11 @@ async function renderSources() {
     readClipboard(),
   ]);
 
+  // Same reasoning as the task list: rebuilding eats clicks on the buttons.
+  const key = JSON.stringify([copied?.url ?? '', media.map((item) => item.url)]);
+  if (key === box.dataset.key) return;
+  box.dataset.key = key;
+
   const rows = [];
   if (copied) rows.push(sourceRow({ ...copied, heading: t('popup.clipboard') }));
   for (const item of media) rows.push(sourceRow({ ...item, heading: t('popup.mediaFound') }));
@@ -143,35 +148,87 @@ function send(type, payload) {
   return chrome.runtime.sendMessage({ target: 'background', type, payload }).catch(() => null);
 }
 
+/**
+ * Rows are updated in place rather than rebuilt.
+ *
+ * Rebuilding the whole list on every broadcast destroyed each button between
+ * mousedown and mouseup, so clicks on Pause, Cancel and Remove were regularly
+ * swallowed -- and broadcasts are frequent while media detection is running.
+ */
+const rows = new Map();
+let emptyNode = null;
+
 function render(next) {
   tasks = next;
-  list.replaceChildren();
 
   if (tasks.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'empty';
-    empty.textContent = t('popup.empty');
-    list.append(empty);
-  } else {
-    for (const task of tasks) list.append(renderRow(task));
+    for (const entry of rows.values()) entry.node.remove();
+    rows.clear();
+    if (!emptyNode) {
+      emptyNode = document.createElement('div');
+      emptyNode.className = 'empty';
+      emptyNode.textContent = t('popup.empty');
+      list.append(emptyNode);
+    }
+    renderSummary();
+    return;
+  }
+
+  emptyNode?.remove();
+  emptyNode = null;
+
+  const seen = new Set();
+  for (const task of tasks) {
+    seen.add(task.id);
+    let entry = rows.get(task.id);
+    if (!entry) {
+      entry = createRow();
+      rows.set(task.id, entry);
+    }
+    updateRow(entry, task);
+    // Appending an element already in the DOM moves it, keeping its listeners.
+    list.append(entry.node);
+  }
+
+  for (const [id, entry] of rows) {
+    if (seen.has(id)) continue;
+    entry.node.remove();
+    rows.delete(id);
   }
 
   renderSummary();
 }
 
-function renderRow(task) {
+function createRow() {
   const node = template.content.firstElementChild.cloneNode(true);
-  node.classList.add(`status-${task.status}`);
+  return {
+    node,
+    badge: node.querySelector('.badge'),
+    filename: node.querySelector('.filename'),
+    info: node.querySelector('.info'),
+    bar: node.querySelector('.bar'),
+    actionBox: node.querySelector('.actions'),
+    status: null,
+  };
+}
 
-  node.querySelector('.badge').textContent = (extensionOf(task.filename) || '?')
-    .slice(0, 4)
-    .toUpperCase();
-  node.querySelector('.filename').textContent = task.filename;
-  node.querySelector('.filename').title = task.url;
-  node.querySelector('.info').replaceChildren(...infoParts(task));
-  node.querySelector('.bar').replaceChildren(...barSegments(task));
-  node.querySelector('.actions').replaceChildren(...actions(task));
-  return node;
+function updateRow(entry, task) {
+  if (entry.status !== task.status) {
+    entry.node.className = `dl status-${task.status}`;
+    // Only the buttons depend on status, so they are the only part rebuilt.
+    entry.actionBox.replaceChildren(...actions(task));
+    entry.status = task.status;
+  }
+
+  const badge = (extensionOf(task.filename) || '?').slice(0, 4).toUpperCase();
+  if (entry.badge.textContent !== badge) entry.badge.textContent = badge;
+  if (entry.filename.textContent !== task.filename) {
+    entry.filename.textContent = task.filename;
+    entry.filename.title = task.url;
+  }
+
+  entry.info.replaceChildren(...infoParts(task));
+  entry.bar.replaceChildren(...barSegments(task));
 }
 
 function infoParts(task) {
