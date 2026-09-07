@@ -3,6 +3,16 @@ import { applyI18n, initI18n, t, SUPPORTED_LOCALES } from '../shared/i18n.js';
 
 const MB = 1024 * 1024;
 let settings = null;
+let saveTimer = 0;
+
+/**
+ * Settings persist as soon as they are touched. Requiring a Save click meant a
+ * changed dropdown looked applied while storage still held the old value.
+ */
+function commit() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 250);
+}
 
 init();
 
@@ -17,7 +27,6 @@ async function init() {
     tab.addEventListener('click', () => selectTab(tab.dataset.tab));
   }
   document.getElementById('add-rule').addEventListener('click', addRule);
-  document.getElementById('save').addEventListener('click', save);
   document.getElementById('reset').addEventListener('click', async () => {
     settings = structuredClone(DEFAULT_SETTINGS);
     renderRules();
@@ -84,6 +93,7 @@ function renderRuleRow(rule) {
   removeButton.addEventListener('click', () => {
     settings.rules = settings.rules.filter((item) => item !== rule);
     renderRules();
+    commit();
   });
   remove.append(removeButton);
 
@@ -139,6 +149,7 @@ function captureModeRow() {
   }
   select.addEventListener('change', () => {
     settings.captureMode = select.value;
+    commit();
   });
   return row('options.general.captureMode', 'options.general.captureModeDesc', select);
 }
@@ -153,6 +164,7 @@ function languageRow() {
   // The whole UI is re-rendered so the change is visible immediately.
   select.addEventListener('change', async () => {
     settings.language = select.value;
+    commit();
     await initI18n(settings.language);
     applyI18n();
     renderRules();
@@ -198,6 +210,7 @@ function toggle(checked, onChange) {
     const next = button.getAttribute('aria-checked') !== 'true';
     button.setAttribute('aria-checked', String(next));
     onChange(next);
+    commit();
   });
   return button;
 }
@@ -213,6 +226,7 @@ function numberInput(value, min, max, onChange) {
     const parsed = Math.min(max, Math.max(min, Math.trunc(Number(input.value)) || 0));
     input.value = String(parsed);
     onChange(parsed);
+    commit();
   });
   return input;
 }
@@ -221,7 +235,10 @@ function textInput(value, onChange) {
   const input = document.createElement('input');
   input.type = 'text';
   input.value = value;
-  input.addEventListener('change', () => onChange(input.value.trim()));
+  input.addEventListener('change', () => {
+    onChange(input.value.trim());
+    commit();
+  });
   return input;
 }
 
@@ -236,5 +253,8 @@ async function save() {
   settings = await saveSettings(settings);
   const badge = document.getElementById('saved');
   badge.hidden = false;
-  setTimeout(() => { badge.hidden = true; }, 2000);
+  clearTimeout(save.hide);
+  save.hide = setTimeout(() => {
+    badge.hidden = true;
+  }, 1600);
 }

@@ -57,7 +57,7 @@ Ayarlardan "her zaman devral" veya "asla devralma" seçilebilir.
 Erken biten bir bağlantı boşta beklemez: en çok işi kalan parçayı ikiye böler ve kuyruk
 yarısını devralır. Korumalar:
 - kalan iş 2 MB'ın altındaysa bölünmez (bağlantı maliyeti kazancı aşar)
-- dosyanın %90'ı bittikten sonra hiç bölünmez
+- bölünecek parçanın kendi %90'ı bittiyse dokunulmaz
 - toplam parça sayısı 32'yi geçemez
 
 Bu üçü birlikte bölmenin kendi kuyruğunu kovalamasını imkânsız kılar: her bölme en az
@@ -72,6 +72,12 @@ sonucun SHA-256'sı sunucudaki dosyayla birebir aynı çıktı.
 Work stealing ayrıca Range destekli yerel bir test sunucusuyla doğrulandı: dosyanın son
 çeyreği kasıtlı yavaşlatıldı, 3 bölme tetiklendi (seg3→seg4, seg3→seg5, seg4→seg6) ve
 40 MB'lık sonucun SHA-256'sı referansla birebir eşleşti.
+
+## Ayarlar
+Değişiklikler anında kaydedilir; Kaydet düğmesi yok. Kural tablosundaki **min. boyut**
+sütununa dikkat: varsayılan olarak kurulum dosyaları 5 MB, arşivler 20 MB, ISO'lar
+50 MB altındaysa Chrome'a bırakılır. Hiç yakalanmıyorsa önce bu eşiğe bakın —
+service worker konsolunda `[dlman] skipped below-min-size` satırı görünür.
 
 ## Bilinen sınırlar
 - Tek bağlantıya düşen (Range desteklemeyen) sunucularda dosya 1 GB'ı geçemez.

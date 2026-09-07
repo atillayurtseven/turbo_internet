@@ -22,8 +22,8 @@ let nextIndex = 0;
  */
 const MIN_SPLIT_BYTES = 1024 * 1024;
 const MAX_SEGMENTS = 32;
-// Past this share of the file, another connection costs more than it saves --
-// and it is the guard that keeps splitting from chasing its own tail.
+// A segment this far along is left alone: handing its last sliver to another
+// connection costs more than it saves.
 const SPLIT_STOP_RATIO = 0.9;
 
 self.onmessage = async (event) => {
@@ -99,7 +99,6 @@ async function runLane(segment, limiter) {
  */
 async function steal() {
   if (controller.signal.aborted || segments.length >= MAX_SEGMENTS) return null;
-  if (config.totalBytes > 0 && totalReceived() / config.totalBytes > SPLIT_STOP_RATIO) return null;
 
   let donor = null;
   let most = 0;
@@ -112,6 +111,11 @@ async function steal() {
     }
   }
   if (!donor || most < MIN_SPLIT_BYTES * 2) return null;
+
+  // The donor with the most left is the best candidate there is; if even it is
+  // nearly finished, nothing is worth splitting.
+  const donorSize = donor.end - donor.start + 1;
+  if (donor.received / donorSize > SPLIT_STOP_RATIO) return null;
 
   // Recomputed here: the donor keeps downloading while this runs.
   const cursor = donor.start + donor.received;
