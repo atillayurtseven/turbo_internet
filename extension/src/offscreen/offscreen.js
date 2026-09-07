@@ -48,7 +48,7 @@ async function handle({ type, payload }) {
 
     case MSG.RETRY:
       if (payload.settings) engine.applySettings(payload.settings);
-      engine.retry(payload.task);
+      await engine.retry(payload.task);
       return { ok: true };
 
     case MSG.CANCEL:

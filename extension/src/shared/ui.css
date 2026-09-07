@@ -25,6 +25,12 @@
     --track: #e3e7ee;
     --primary-bg: #e8f0ff;
     --primary-line: #b7cfff;
+    /* Darkened for light backgrounds: the dark-theme values sit around 2:1
+       against white, well under the 4.5:1 needed to be readable. */
+    --acc: #1a5fd0;
+    --ok: #0f7a4d;
+    --warn: #8a5a00;
+    --err: #c62828;
   }
 }
 
@@ -67,15 +73,17 @@ input, select {
   width: 36px;
   height: 20px;
   border-radius: 20px;
-  background: #333a48;
+  /* Themed: the old fixed dark fill made an "off" switch look filled-in, and
+     so barely distinguishable from "on", on a light background. */
+  background: var(--track);
+  border: 1px solid var(--line);
   position: relative;
   display: inline-block;
   cursor: pointer;
   flex: 0 0 auto;
-  border: 0;
   padding: 0;
 }
-.switch[aria-checked='true'] { background: var(--acc); }
+.switch[aria-checked='true'] { background: var(--acc); border-color: var(--acc); }
 .switch::after {
   content: '';
   position: absolute;
@@ -84,7 +92,8 @@ input, select {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 35%);
   transition: left 0.15s;
 }
-.switch[aria-checked='true']::after { left: 18px; }
+.switch[aria-checked='true']::after { left: 17px; background: #fff; }

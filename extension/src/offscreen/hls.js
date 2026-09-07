@@ -1,4 +1,4 @@
-import { referrerInit, HttpError } from './probe.js';
+import { credentialsFor, referrerInit, HttpError } from './probe.js';
 
 /**
  * Minimal HLS playlist reader: enough for downloading a VOD stream, not a
@@ -14,7 +14,7 @@ export async function loadPlaylist(url, { referrer = '', signal } = {}) {
 
   const variant = pickVariant(lines, url);
   const mediaUrl = variant ?? url;
-  const media = variant ? await fetchText(mediaUrl, referrer, signal) : master;
+  const media = variant ? await fetchText(mediaUrl, referrer, signal, url) : master;
 
   return parseMedia(media, mediaUrl, referrer, signal);
 }
@@ -106,8 +106,9 @@ async function readKey(line, baseUrl, referrer, signal) {
   const uri = /URI="([^"]+)"/.exec(line)?.[1];
   if (!uri) throw new Error('key tag without URI');
 
-  const response = await fetch(new URL(uri, baseUrl).href, {
-    credentials: 'include',
+  const keyUrl = new URL(uri, baseUrl).href;
+  const response = await fetch(keyUrl, {
+    credentials: credentialsFor(keyUrl, baseUrl),
     cache: 'no-store',
     signal,
     ...referrerInit(referrer),
@@ -150,9 +151,9 @@ function hexToBytes(hex) {
   return out;
 }
 
-async function fetchText(url, referrer, signal) {
+async function fetchText(url, referrer, signal, base = url) {
   const response = await fetch(url, {
-    credentials: 'include',
+    credentials: credentialsFor(url, base),
     cache: 'no-store',
     signal,
     ...referrerInit(referrer),

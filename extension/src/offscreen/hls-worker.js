@@ -5,7 +5,7 @@
  * work in pieces, so a free lane simply takes the next one.
  */
 import { OPFS_DIR, PROGRESS_INTERVAL_MS } from '../shared/constants.js';
-import { referrerInit, HttpError } from './probe.js';
+import { credentialsFor, referrerInit, HttpError } from './probe.js';
 
 let controller = null;
 let config = null;
@@ -59,7 +59,11 @@ async function start(payload) {
     self.postMessage({ type: 'done', receivedBytes: received });
   } catch (error) {
     clearInterval(progressTimer);
-    if (controller.signal.aborted) self.postMessage({ type: 'stopped', segments: snapshot() });
+    if (controller.signal.aborted) {
+      // receivedBytes must travel with it: segment.received is a 0/1 flag here,
+      // and summing those gave a byte count of "number of segments".
+      self.postMessage({ type: 'stopped', segments: snapshot(), receivedBytes: received });
+    }
     else fail(error);
   } finally {
     running = false;
@@ -90,7 +94,7 @@ async function withRetry(segment, dir) {
       if (controller.signal.aborted) throw error;
       last = error;
       if (error instanceof HttpError && !error.retryable) break;
-      await sleep(Math.min(config.backoffMs * 2 ** attempt, 30000));
+      await sleep(Math.min(config.backoffMs * 2 ** attempt, 30000), controller.signal);
     }
   }
 
@@ -105,7 +109,7 @@ async function fetchSegment(segment, dir) {
     headers: range
       ? { Range: `bytes=${range.offset}-${range.offset + range.length - 1}` }
       : {},
-    credentials: 'include',
+    credentials: credentialsFor(segment.url, config.playlistUrl ?? segment.url),
     cache: 'no-store',
     redirect: 'follow',
     signal: controller.signal,
@@ -176,4 +180,16 @@ async function openDir() {
   return root.getDirectoryHandle(OPFS_DIR, { create: true });
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}

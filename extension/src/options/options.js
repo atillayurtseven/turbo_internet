@@ -37,7 +37,9 @@ async function init() {
 
 function selectTab(name) {
   for (const tab of document.querySelectorAll('.tab')) {
-    tab.classList.toggle('active', tab.dataset.tab === name);
+    const active = tab.dataset.tab === name;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
   }
   document.getElementById('types').hidden = name !== 'types';
   document.getElementById('general').hidden = name !== 'general';
@@ -54,25 +56,31 @@ function renderRuleRow(rule) {
   const tr = document.createElement('tr');
 
   const match = document.createElement('td');
+  const label = rule.label || rule.id;
   const exts = textInput(rule.extensions.map((e) => `.${e}`).join(' '), (value) => {
     rule.extensions = value.split(/[\s,]+/).map((e) => e.replace(/^\./, '').toLowerCase()).filter(Boolean);
   });
   exts.className = 'exts';
   exts.title = t('options.rules.extensions');
+  exts.setAttribute('aria-label', `${label}: ${t('options.rules.extensions')}`);
   const mimes = textInput(rule.mimePatterns.join(', '), (value) => {
     rule.mimePatterns = value.split(/[\s,]+/).map((m) => m.toLowerCase()).filter(Boolean);
   });
   mimes.className = 'mimes';
   mimes.placeholder = t('options.rules.mime');
+  mimes.setAttribute('aria-label', `${label}: ${t('options.rules.mime')}`);
   match.append(exts, mimes);
 
   const capture = document.createElement('td');
-  capture.append(toggle(rule.capture, (value) => { rule.capture = value; }));
+  capture.append(
+    toggle(rule.capture, (value) => { rule.capture = value; }, `${label}: ${t('options.rules.col.capture')}`),
+  );
 
   const connections = document.createElement('td');
   connections.className = 'narrow';
   connections.append(
-    numberInput(rule.connections, 1, 32, (value) => { rule.connections = value; }),
+    numberInput(rule.connections, 1, 32, (value) => { rule.connections = value; },
+      `${label}: ${t('options.rules.col.connections')}`),
   );
 
   const minSize = document.createElement('td');
@@ -80,16 +88,20 @@ function renderRuleRow(rule) {
   minSize.append(
     numberInput(Math.round(rule.minSizeBytes / MB), 0, 100000, (value) => {
       rule.minSizeBytes = value * MB;
-    }),
+    }, `${label}: ${t('options.rules.col.minSize')}`),
     unit('unit.mb'),
   );
 
   const folder = document.createElement('td');
-  folder.append(textInput(rule.subfolder, (value) => { rule.subfolder = value; }));
+  folder.append(
+    textInput(rule.subfolder, (value) => { rule.subfolder = value; },
+      `${label}: ${t('options.rules.col.folder')}`),
+  );
 
   const remove = document.createElement('td');
   const removeButton = document.createElement('button');
   removeButton.textContent = t('action.remove');
+  removeButton.setAttribute('aria-label', `${label}: ${t('action.remove')}`);
   removeButton.addEventListener('click', () => {
     settings.rules = settings.rules.filter((item) => item !== rule);
     renderRules();
@@ -211,19 +223,21 @@ function row(labelKey, descKey, control, unitKey) {
 function switchRow(labelKey, descKey, key) {
   return row(labelKey, descKey, toggle(settings[key], (value) => {
     settings[key] = value;
-  }));
+  }, t(labelKey)));
 }
 
 function numberRow(labelKey, descKey, value, min, max, onChange, unitKey) {
-  return row(labelKey, descKey, numberInput(value, min, max, onChange), unitKey);
+  return row(labelKey, descKey, numberInput(value, min, max, onChange, t(labelKey)), unitKey);
 }
 
-function toggle(checked, onChange) {
+function toggle(checked, onChange, label) {
   const button = document.createElement('button');
   button.className = 'switch';
   button.type = 'button';
   button.setAttribute('role', 'switch');
   button.setAttribute('aria-checked', String(Boolean(checked)));
+  // Without a name a screen reader announces every one of these as "switch".
+  if (label) button.setAttribute('aria-label', label);
   button.addEventListener('click', () => {
     const next = button.getAttribute('aria-checked') !== 'true';
     button.setAttribute('aria-checked', String(next));
@@ -241,12 +255,13 @@ function unit(key) {
   return span;
 }
 
-function numberInput(value, min, max, onChange) {
+function numberInput(value, min, max, onChange, label) {
   const input = document.createElement('input');
   input.type = 'number';
   input.value = String(value);
   input.min = String(min);
   input.max = String(max);
+  if (label) input.setAttribute('aria-label', label);
   input.addEventListener('change', () => {
     const parsed = Math.min(max, Math.max(min, Math.trunc(Number(input.value)) || 0));
     input.value = String(parsed);
@@ -256,10 +271,11 @@ function numberInput(value, min, max, onChange) {
   return input;
 }
 
-function textInput(value, onChange) {
+function textInput(value, onChange, label) {
   const input = document.createElement('input');
   input.type = 'text';
   input.value = value;
+  if (label) input.setAttribute('aria-label', label);
   input.addEventListener('change', () => {
     onChange(input.value.trim());
     commit();

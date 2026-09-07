@@ -153,7 +153,9 @@ async function runSegment(segment, limiter) {
       if (controller.signal.aborted) throw error;
       lastError = error;
       if (error instanceof HttpError && !error.retryable) break;
-      await sleep(Math.min(config.backoffMs * 2 ** attempt, 30000), controller.signal);
+      if (attempt < attempts - 1) {
+        await sleep(Math.min(config.backoffMs * 2 ** attempt, 30000), controller.signal);
+      }
     }
   }
 
@@ -164,6 +166,16 @@ async function runSegment(segment, limiter) {
 }
 
 async function fetchSegment(segment, limiter) {
+  const handle = handles.get(segment.index);
+
+  // Without Range the server always replies from byte zero, so anything already
+  // on disk has to go: writing the fresh body at the old offset spliced partial
+  // and full copies together and silently corrupted the file.
+  if (!config.rangeSupported && segment.received > 0) {
+    handle.truncate(0);
+    segment.received = 0;
+  }
+
   const from = segment.start + segment.received;
   const headers = {};
   if (config.rangeSupported) {
@@ -185,7 +197,6 @@ async function fetchSegment(segment, limiter) {
   if (config.rangeSupported && response.status !== 206) throw new HttpError(response.status);
   if (!response.body) throw new Error('empty response body');
 
-  const handle = handles.get(segment.index);
   const reader = response.body.getReader();
 
   while (true) {
@@ -289,14 +300,16 @@ function createLimiter(bytesPerSecond) {
 
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(new DOMException('Aborted', 'AbortError'));
-      },
-      { once: true },
-    );
+    // The listener has to come off on the normal path too: with a speed limit
+    // this runs once per chunk, and { once: true } only fires on abort.
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }

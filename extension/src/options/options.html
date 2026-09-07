@@ -10,12 +10,14 @@
     <div class="wrap">
       <h1 data-i18n="options.title"></h1>
 
-      <nav class="tabs">
-        <button class="tab active" data-tab="types" data-i18n="options.tab.fileTypes"></button>
-        <button class="tab" data-tab="general" data-i18n="options.tab.general"></button>
+      <nav class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" aria-controls="types"
+                data-tab="types" data-i18n="options.tab.fileTypes"></button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="general"
+                data-tab="general" data-i18n="options.tab.general"></button>
       </nav>
 
-      <section id="types" class="panel">
+      <section id="types" class="panel" role="tabpanel">
         <h2 data-i18n="options.rules.heading"></h2>
         <p class="hint" data-i18n="options.rules.desc"></p>
         <table>
@@ -38,11 +40,11 @@
         <button id="add-rule" data-i18n="options.rules.addRule"></button>
       </section>
 
-      <section id="general" class="panel" hidden></section>
+      <section id="general" class="panel" role="tabpanel" hidden></section>
 
       <footer class="bar">
         <button id="reset" data-i18n="action.reset"></button>
-        <span id="saved" class="saved" hidden data-i18n="options.saved"></span>
+        <span id="saved" class="saved" role="status" aria-live="polite" hidden data-i18n="options.saved"></span>
       </footer>
     </div>
     <script type="module" src="options.js"></script>

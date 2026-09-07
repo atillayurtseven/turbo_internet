@@ -1,4 +1,5 @@
 import {
+  ACTIVE_STATUSES,
   KEEPALIVE_INTERVAL_MS,
   KIND,
   MSG,
@@ -8,7 +9,7 @@ import {
 } from '../shared/constants.js';
 import { planSegments, segmentCount } from '../background/rules.js';
 import { sanitizeFilename } from '../shared/filetypes.js';
-import { probe } from './probe.js';
+import { HttpError, probe } from './probe.js';
 import { loadPlaylist } from './hls.js';
 import {
   MAX_PART_BYTES,
@@ -66,13 +67,16 @@ export class Engine {
   }
 
   resume(task) {
+    // The service worker marks a task paused before the engine has stopped, so
+    // a quick Resume could otherwise start a second worker on the same files.
+    if (this.#workers.has(task.id)) return;
     const existing = this.#tasks.get(task.id) ?? task;
     this.#tasks.set(task.id, { ...existing, status: STATUS.QUEUED, error: '', speed: 0 });
     this.#push();
     this.#pump();
   }
 
-  retry(task) {
+  async retry(task) {
     const fresh = {
       ...task,
       status: STATUS.QUEUED,
@@ -83,7 +87,11 @@ export class Engine {
       rangeSupported: null,
     };
     this.#tasks.set(task.id, fresh);
-    deleteParts(task.id);
+    this.#hlsParts.delete(task.id);
+    // Awaited, and after the worker is gone: a pending delete used to race the
+    // restarted worker and remove part files it had just created.
+    this.#terminate(task.id);
+    await deleteParts(task.id);
     this.#push();
     this.#pump();
   }
@@ -99,6 +107,9 @@ export class Engine {
       this.#terminate(id);
     }
     await deleteParts(id);
+    // Parsed playlists hold CryptoKey objects; dropping the task alone left
+    // them alive for as long as the offscreen document lived.
+    this.#hlsParts.delete(id);
     if (task) {
       task.status = STATUS.CANCELED;
       task.speed = 0;
@@ -111,15 +122,19 @@ export class Engine {
   releaseBlob(id, blobUrl) {
     URL.revokeObjectURL(blobUrl ?? this.#blobs.get(id));
     this.#blobs.delete(id);
-    deleteParts(id);
+    deleteParts(id).catch((error) => console.warn('[dlman/engine] cleanup failed', error));
   }
 
   // ---- internals -----------------------------------------------------------
 
   #activeCount() {
-    return [...this.#tasks.values()].filter(
-      (task) => task.status === STATUS.PROBING || task.status === STATUS.DOWNLOADING,
-    ).length;
+    // Remuxing and assembling count as busy: otherwise the concurrency limit is
+    // exceeded and the keepalive stops during a long conversion.
+    let active = 0;
+    for (const task of this.#tasks.values()) {
+      if (ACTIVE_STATUSES.has(task.status)) active += 1;
+    }
+    return active;
   }
 
   /** Starts queued tasks up to the concurrency limit. */
@@ -139,9 +154,13 @@ export class Engine {
   async #start(task) {
     if (task.kind === KIND.HLS) {
       // The parsed playlist is lost whenever the offscreen document restarts,
-      // so it is re-read rather than trusted from persisted state.
-      if (!this.#hlsParts.has(task.id)) await this.#prepareHls(task);
-      if (task.status !== STATUS.PROBING) return;
+      // so it is re-read rather than trusted from persisted state. The status
+      // check belongs inside: a resumed task still holds its parts, and
+      // checking unconditionally left it stuck in the queue forever.
+      if (!this.#hlsParts.has(task.id)) {
+        await this.#prepareHls(task);
+        if (task.status !== STATUS.PROBING) return;
+      }
     } else {
       const hasPlan = Array.isArray(task.segments) && task.segments.length > 0;
       if (!hasPlan) {
@@ -159,7 +178,12 @@ export class Engine {
     this.#probes.set(task.id, controller);
 
     try {
-      const result = await probe(task.url, { referrer: task.referrer, signal: controller.signal });
+      // Retried like a segment is: a transient 5xx on the very first request
+      // used to kill the download outright, even though every later request
+      // would have been retried.
+      const result = await this.#retry(() =>
+        probe(task.url, { referrer: task.referrer, signal: controller.signal }),
+      );
       // The original URL is kept: it is what the duplicate guards match on,
       // and overwriting it here let a redirected file be downloaded twice.
       task.resolvedUrl = result.url;
@@ -224,6 +248,10 @@ export class Engine {
       if (message.type === 'progress') return;
       if (message.type === 'done') {
         this.#onWorkerMessage(task.id, { type: 'remuxed', parts: message.parts });
+      } else if (message.type === 'stopped') {
+        // Aborted by the user: pausing must not deliver a half-converted file.
+        this.#terminate(task.id);
+        this.#setStatus(task, STATUS.PAUSED);
       } else if (message.type === 'error') {
         this.#terminate(task.id);
         // The segments are still on disk, so the stream is delivered as TS
@@ -256,10 +284,9 @@ export class Engine {
     this.#probes.set(task.id, controller);
 
     try {
-      const playlist = await loadPlaylist(task.url, {
-        referrer: task.referrer,
-        signal: controller.signal,
-      });
+      const playlist = await this.#retry(() =>
+        loadPlaylist(task.url, { referrer: task.referrer, signal: controller.signal }),
+      );
 
       const parts = [];
       if (playlist.init) {
@@ -300,7 +327,26 @@ export class Engine {
     }
   }
 
+  /** Runs `attempt` until it succeeds, a retry is pointless, or budget runs out. */
+  async #retry(attempt) {
+    const tries = this.#settings.segmentRetries + 1;
+    let last = null;
+    for (let i = 0; i < tries; i += 1) {
+      try {
+        return await attempt();
+      } catch (error) {
+        if (error?.name === 'AbortError') throw error;
+        // A 404 or 403 will not become a 200 by asking again.
+        if (error instanceof HttpError && !error.retryable) throw error;
+        last = error;
+        await delay(Math.min(this.#settings.retryBackoffMs * 2 ** i, 15000));
+      }
+    }
+    throw last;
+  }
+
   #spawn(task) {
+    if (this.#workers.has(task.id)) return;
     if (task.kind === KIND.HLS) {
       this.#spawnHls(task);
       return;
@@ -354,6 +400,7 @@ export class Engine {
       payload: {
         id: task.id,
         referrer: task.referrer,
+        playlistUrl: task.url,
         connections: task.connections,
         retries: this.#settings.segmentRetries,
         backoffMs: this.#settings.retryBackoffMs,
@@ -458,16 +505,24 @@ export class Engine {
     const blobUrl = URL.createObjectURL(blob);
     this.#blobs.set(task.id, blobUrl);
 
-    const response = await chrome.runtime.sendMessage({
-      target: 'background',
-      type: MSG.DELIVER,
-      payload: {
-        id: task.id,
-        blobUrl,
-        filename: task.filename,
-        subfolder: task.subfolder,
-      },
-    });
+    let response;
+    try {
+      response = await chrome.runtime.sendMessage({
+        target: 'background',
+        type: MSG.DELIVER,
+        payload: {
+          id: task.id,
+          blobUrl,
+          filename: task.filename,
+          subfolder: task.subfolder,
+        },
+      });
+    } catch (error) {
+      // The service worker may be gone; release the URL rather than leak it.
+      URL.revokeObjectURL(blobUrl);
+      this.#blobs.delete(task.id);
+      throw error;
+    }
 
     if (response?.ok) {
       task.completedAt = Date.now();
@@ -487,6 +542,7 @@ export class Engine {
 
   #fail(task, error, detail) {
     if (!task) return;
+    this.#hlsParts.delete(task.id);
     task.error = detail?.segmentIndex >= 0
       ? `segment ${detail.segmentIndex}: ${error.message}`
       : String(error?.message || error);
@@ -556,3 +612,5 @@ function withExtension(filename, container) {
   const base = String(filename || 'video').replace(/\.(m3u8|mpd|ts|mp4)$/i, '');
   return `${base}.${container === 'mp4' ? 'mp4' : 'ts'}`;
 }
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

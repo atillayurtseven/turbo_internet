@@ -59,6 +59,19 @@ export function referrerInit(referrer) {
   return { referrer, referrerPolicy: 'unsafe-url' };
 }
 
+/**
+ * Cookies go only to the origin the user actually asked to download from.
+ * Playlist entries are page-controlled, so a hostile stream could otherwise
+ * have the browser make credentialed requests to any host it names.
+ */
+export function credentialsFor(url, baseUrl) {
+  try {
+    return new URL(url).origin === new URL(baseUrl).origin ? 'include' : 'omit';
+  } catch {
+    return 'omit';
+  }
+}
+
 export class HttpError extends Error {
   constructor(status) {
     super(`HTTP ${status}`);

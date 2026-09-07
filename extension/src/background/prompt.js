@@ -102,16 +102,23 @@ function overlay(s) {
 
     const host = document.createElement('div');
     host.setAttribute('data-dlman-card', '');
-    // `all` must come first: as the last declaration it would reset the
-    // positioning above it and drop the card to the bottom of the document.
-    host.style.cssText =
-      'all:initial;position:fixed;top:16px;right:16px;z-index:2147483647;pointer-events:auto;';
+    // `all` first: as the last declaration it would reset the positioning after
+    // it. Marked important because a page rule such as `div { position: static
+    // !important }` otherwise wins over inline styles and hides the card.
+    host.style.cssText = 'all:initial;';
+    for (const [name, value] of [
+      ['position', 'fixed'], ['top', '16px'], ['right', '16px'],
+      ['z-index', '2147483647'], ['pointer-events', 'auto'], ['display', 'block'],
+    ]) {
+      host.style.setProperty(name, value, 'important');
+    }
     const root = host.attachShadow({ mode: 'closed' });
 
     root.innerHTML = `
       <style>
         .card {
           width: 320px; box-sizing: border-box; padding: 14px 16px;
+          max-height: calc(100vh - 32px); overflow-y: auto;
           font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           color: #e6e9ef; background: #171a21;
           border: 1px solid #2a2f3a; border-radius: 12px;
@@ -124,18 +131,21 @@ function overlay(s) {
                background: linear-gradient(135deg,#5B9BFF,#8B5CF6); }
         .title { font-weight: 600; font-size: 13px; }
         .q { color: #9aa3b2; font-size: 12px; margin-bottom: 6px; }
-        .file { font-size: 12px; word-break: break-all; margin-bottom: 2px; }
+        /* Clamped: an overlong name could otherwise push the buttons off screen. */
+        .file { font-size: 12px; word-break: break-all; margin-bottom: 2px;
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                overflow: hidden; }
         .size { color: #9aa3b2; font-size: 11px; }
         .row { display: flex; gap: 8px; margin-top: 12px; }
         button { flex: 1; font: inherit; font-size: 12px; cursor: pointer;
                  padding: 7px 10px; border-radius: 8px;
                  border: 1px solid #2a2f3a; background: #1e222b; color: #9aa3b2; }
         button.go { background: #1b2740; border-color: #33507e; color: #e6e9ef; font-weight: 600; }
-        .tick { margin-top: 8px; color: #656d7a; font-size: 11px; text-align: center; }
+        .tick { margin-top: 8px; color: #9aa3b2; font-size: 11px; text-align: center; }
       </style>
-      <div class="card">
+      <div class="card" role="alertdialog" aria-modal="true" aria-labelledby="dlman-q">
         <div class="head"><div class="dot"></div><div class="title"></div></div>
-        <div class="q"></div>
+        <div class="q" id="dlman-q"></div>
         <div class="file"></div>
         <div class="size"></div>
         <div class="row">
@@ -168,18 +178,27 @@ function overlay(s) {
 
     function done(choice) {
       clearInterval(timer);
+      listeners.abort();
       host.remove();
       resolve(choice);
     }
 
-    $('.go').addEventListener('click', () => done(s.manager));
-    $('.skip').addEventListener('click', () => done(s.chrome));
-    document.addEventListener('keydown', function onKey(event) {
-      if (event.key !== 'Escape') return;
-      document.removeEventListener('keydown', onKey);
-      done(s.chrome);
-    });
+    // One controller removes every listener, including on the click path --
+    // the keydown handler used to outlive a dismissed card.
+    const listeners = new AbortController();
+    const opts = { signal: listeners.signal };
+    $('.go').addEventListener('click', () => done(s.manager), opts);
+    $('.skip').addEventListener('click', () => done(s.chrome), opts);
+    document.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key === 'Escape') done(s.chrome);
+      },
+      opts,
+    );
 
     (document.body ?? document.documentElement).append(host);
+    $('.file').title = s.filename;
+    $('.go').focus();
   });
 }

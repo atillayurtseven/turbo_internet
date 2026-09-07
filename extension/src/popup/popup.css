@@ -13,7 +13,7 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
 .tagline { font-size: 11px; color: var(--dim); }
 .icon { margin-left: auto; background: none; }
 
-.list { overflow-y: auto; flex: 1; }
+.list { overflow-y: auto; flex: 1; min-height: 110px; }
 .empty { padding: 32px 14px; text-align: center; color: var(--dim); }
 
 .dl { padding: 11px 14px; border-bottom: 1px solid var(--line); }
@@ -36,8 +36,7 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
   background: currentColor; opacity: .45;
   margin-right: 7px; vertical-align: middle;
 }
-.info .chip.seg { border-color: #2c4b7a; color: #8ab4ff; }
-.info .chip.ok { border-color: #2c5c46; color: var(--ok); }
+.info .chip.ok { border-color: var(--ok); color: var(--ok); }
 .info .warn { color: var(--warn); }
 .info .err { color: var(--err); }
 
@@ -58,7 +57,12 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
 }
 .foot button { margin-left: auto; }
 
-.sources { border-bottom: 1px solid var(--line); background: var(--panel-2); }
+.sources {
+  border-bottom: 1px solid var(--line); background: var(--panel-2);
+  /* Capped so a page announcing many streams cannot squeeze the download list
+     down to nothing inside the popup's fixed height. */
+  max-height: 200px; overflow-y: auto; flex: 0 0 auto;
+}
 .sources h2 {
   margin: 0; padding: 8px 14px 4px; font-size: 10px; font-weight: 600;
   color: var(--dim); text-transform: uppercase; letter-spacing: .4px;

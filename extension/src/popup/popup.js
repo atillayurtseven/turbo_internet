@@ -6,12 +6,14 @@ import { extensionOf } from '../shared/filetypes.js';
 const list = document.getElementById('list');
 const template = document.getElementById('row-template');
 let tasks = [];
+let settings = null;
 
 init();
 
 async function init() {
   const state = await send(MSG.GET_STATE);
-  await initI18n(state?.settings?.language);
+  settings = state?.settings ?? null;
+  await initI18n(settings?.language);
   applyI18n();
 
   document.getElementById('settings').addEventListener('click', () => chrome.runtime.openOptionsPage());
@@ -125,6 +127,10 @@ function sourceRow(item) {
 }
 
 async function readClipboard() {
+  // Reading the OS clipboard is a privacy call: honour the setting instead of
+  // looking at whatever the user last copied, which may be a password.
+  if (settings && settings.clipboardWatch === false) return null;
+
   const stored = await send(MSG.GET_CLIPBOARD).then((r) => r?.clipboard ?? null);
   try {
     const text = (await navigator.clipboard.readText()).trim();
@@ -286,14 +292,22 @@ function infoParts(task) {
 // segments are pooled into this many cells. An HLS stream easily has hundreds.
 const MAX_CELLS = 16;
 
+const barCache = new Map();
+
 function barSegments(task) {
+  // Memoised: an HLS task carries thousands of segments and this ran for every
+  // row on every broadcast, twice a second.
+  const key = `${task.status}:${task.receivedBytes}:${task.segments?.length ?? 0}`;
+  const cached = barCache.get(task.id);
+  if (cached?.key === key) return cached.nodes.map((node) => node.cloneNode(true));
+
   // By offset, not array order: work stealing appends split segments at the end.
   const ordered = task.segments?.length
     ? [...task.segments].sort((a, b) => a.start - b.start)
     : [null];
   const segments = ordered.length > MAX_CELLS ? pool(ordered, MAX_CELLS) : ordered;
 
-  return segments.map((segment) => {
+  const nodes = segments.map((segment) => {
     const wrap = document.createElement('div');
     wrap.className = 'seg';
     wrap.style.flex =
@@ -311,6 +325,10 @@ function barSegments(task) {
     wrap.append(fill);
     return wrap;
   });
+
+  barCache.set(task.id, { key, nodes });
+  if (barCache.size > 60) barCache.delete(barCache.keys().next().value);
+  return nodes.map((node) => node.cloneNode(true));
 }
 
 /** Merges consecutive segments into `cells` buckets, keeping their proportions. */

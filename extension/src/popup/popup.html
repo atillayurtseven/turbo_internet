@@ -12,7 +12,7 @@
         <div class="name" data-i18n="app.name"></div>
         <div class="tagline" id="tagline"></div>
       </div>
-      <button id="settings" class="icon" data-i18n-attr="title:action.settings">⚙</button>
+      <button id="settings" class="icon" data-i18n-attr="title:action.settings,aria-label:action.settings"><span aria-hidden="true">⚙</span></button>
     </header>
 
     <section id="sources" class="sources" hidden></section>
@@ -20,7 +20,8 @@
     <main id="list" class="list"></main>
 
     <div class="paste">
-      <input id="paste-url" type="url" data-i18n-attr="placeholder:popup.pastePlaceholder" />
+      <input id="paste-url" type="url"
+             data-i18n-attr="placeholder:popup.pastePlaceholder,aria-label:popup.pastePlaceholder" />
       <button id="paste-go" data-i18n="popup.download"></button>
     </div>
 

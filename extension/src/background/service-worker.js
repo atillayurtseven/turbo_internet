@@ -1,6 +1,6 @@
 import { ACTIVE_STATUSES, KIND, MSG, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
 import { loadSettings, onSettingsChanged } from '../shared/settings.js';
-import { joinPath } from '../shared/filetypes.js';
+import { joinPath, sanitizeFilename } from '../shared/filetypes.js';
 import { initI18n, t } from '../shared/i18n.js';
 import { matchRule } from './rules.js';
 import { clearMedia, mediaFor, registerMediaSniffer } from './media.js';
@@ -17,6 +17,9 @@ import * as state from './state.js';
  */
 
 let settings = null;
+
+/** The only message a content script is allowed to send. */
+const CONTENT_MESSAGES = new Set([MSG.CLIPBOARD_HIT]);
 
 const ready = (async () => {
   settings = await loadSettings();
@@ -104,7 +107,11 @@ try {
   registerMediaSniffer((tabId, item) => {
     if (!settings?.detectMedia) return;
     broadcast();
-    if (item) offerMedia(tabId, item);
+    if (item) {
+      offerMedia(tabId, item).catch((error) =>
+        console.warn('[dlman] media offer failed', error?.message || error),
+      );
+    }
   });
 } catch (error) {
   // Media detection is a nicety; a missing API must never stop downloads from
@@ -176,6 +183,8 @@ function hostOf(url) {
 /** Queues something the user picked by hand: a page's media, or a pasted URL. */
 async function startManual({ url, name, kind }) {
   await ready;
+  // The interceptor path checks this in rules.js; messages come in unchecked.
+  if (!/^https?:\/\//i.test(String(url))) throw new Error('unsupported-scheme');
   const filename = sanitizeManualName(name, url);
   const matched = matchRule(settings.rules, { filename, url, mime: '' });
   return start({
@@ -192,7 +201,7 @@ async function startManual({ url, name, kind }) {
 
 function sanitizeManualName(name, url) {
   const raw = name || decodeURIComponent(new URL(url).pathname.split('/').pop() || 'download');
-  return raw.replace(/[\\/]/g, '_').slice(0, 180) || 'download';
+  return sanitizeFilename(raw.split(/[\\/]/).pop());
 }
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
@@ -230,6 +239,16 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.target && message.target !== 'background') return false;
+  // Only this extension's own pages and scripts may drive the engine, and the
+  // content script -- which runs on every site -- may send just one message.
+  // The test is the sender's own URL, not sender.tab: extension pages opened in
+  // a tab (the options page, for one) have a tab too.
+  if (sender.id !== chrome.runtime.id) return false;
+  const fromOurPage = String(sender.url || '').startsWith(chrome.runtime.getURL(''));
+  if (!fromOurPage && !CONTENT_MESSAGES.has(message?.type)) {
+    console.warn('[dlman] refused', message?.type, 'from a content script');
+    return false;
+  }
   handleMessage(message, sender).then(sendResponse, (error) => {
     console.error('[dlman] message failed', message?.type, error);
     sendResponse({ ok: false, error: String(error?.message || error) });
@@ -247,6 +266,9 @@ async function handleMessage(message, sender) {
 
     case MSG.PAUSE:
     case MSG.CANCEL: {
+      // Without this an id-less message inserts a nameless ghost row that the
+      // tombstone list cannot even remove.
+      if (!payload?.id) return { ok: false, error: 'missing-id' };
       // Best effort: the user must be able to stop a download even when the
       // engine is wedged, so local state is updated either way.
       await sendToOffscreen(type, payload).catch((error) =>
@@ -339,16 +361,25 @@ async function handleMessage(message, sender) {
 const deliveries = new Map();
 
 async function deliver({ id, blobUrl, filename, subfolder }) {
-  const path = joinPath(subfolder, filename);
+  // Guards a privileged call: without them a crafted message could have this
+  // silently save any URL under a name of its choosing.
+  if (!String(blobUrl).startsWith('blob:')) return { ok: false, error: 'not-a-blob' };
+  if (!state.getTasks().some((task) => task.id === id)) return { ok: false, error: 'unknown-task' };
+
+  const path = joinPath(subfolder, sanitizeFilename(filename));
   deliveries.set(blobUrl, path);
   try {
+    // Armed before the download starts: a blob backed by local files can finish
+    // before download() even resolves, and the completion event was then missed,
+    // leaving the task stuck in "assembling" with the blob never released.
+    const finished = new Deferred();
     const downloadId = await chrome.downloads.download({
       url: blobUrl,
       filename: path,
       conflictAction: 'uniquify',
       saveAs: false,
     });
-    await waitForDownload(downloadId);
+    await waitForDownload(downloadId, finished);
     await state.upsert({
       id,
       status: STATUS.COMPLETED,
@@ -368,20 +399,42 @@ async function deliver({ id, blobUrl, filename, subfolder }) {
   }
 }
 
-function waitForDownload(downloadId) {
-  return new Promise((resolve, reject) => {
-    const listener = (delta) => {
-      if (delta.id !== downloadId) return;
-      if (delta.state?.current === 'complete') {
-        chrome.downloads.onChanged.removeListener(listener);
-        resolve();
-      } else if (delta.state?.current === 'interrupted') {
-        chrome.downloads.onChanged.removeListener(listener);
-        reject(new Error(delta.error?.current || 'interrupted'));
-      }
-    };
-    chrome.downloads.onChanged.addListener(listener);
-  });
+class Deferred {
+  constructor() {
+    this.promise = new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
+  }
+}
+
+const DELIVERY_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * Resolves when Chrome has written the file. The event can arrive before this
+ * is called, so the current state is polled once as well, and a timeout keeps
+ * the listener from outliving a download that never reports either outcome.
+ */
+async function waitForDownload(downloadId, deferred) {
+  const listener = (delta) => {
+    if (delta.id !== downloadId) return;
+    if (delta.state?.current === 'complete') deferred.resolve();
+    else if (delta.state?.current === 'interrupted') {
+      deferred.reject(new Error(delta.error?.current || 'interrupted'));
+    }
+  };
+  chrome.downloads.onChanged.addListener(listener);
+
+  const timer = setTimeout(() => deferred.reject(new Error('delivery timed out')), DELIVERY_TIMEOUT_MS);
+  try {
+    const [item] = await chrome.downloads.search({ id: downloadId });
+    if (item?.state === 'complete') deferred.resolve();
+    else if (item?.state === 'interrupted') deferred.reject(new Error(item.error || 'interrupted'));
+    await deferred.promise;
+  } finally {
+    clearTimeout(timer);
+    chrome.downloads.onChanged.removeListener(listener);
+  }
 }
 
 function sameSource(task, url) {
