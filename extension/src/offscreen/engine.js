@@ -160,7 +160,9 @@ export class Engine {
 
     try {
       const result = await probe(task.url, { referrer: task.referrer, signal: controller.signal });
-      task.url = result.url;
+      // The original URL is kept: it is what the duplicate guards match on,
+      // and overwriting it here let a redirected file be downloaded twice.
+      task.resolvedUrl = result.url;
       task.totalBytes = result.totalBytes || task.totalBytes;
       task.mime = task.mime || result.mime;
       if (result.filename) task.filename = sanitizeFilename(result.filename);
@@ -318,7 +320,7 @@ export class Engine {
       type: 'start',
       payload: {
         id: task.id,
-        url: task.url,
+        url: task.resolvedUrl ?? task.url,
         referrer: task.referrer,
         totalBytes: task.totalBytes,
         rangeSupported: Boolean(task.rangeSupported),

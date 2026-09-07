@@ -48,7 +48,9 @@ registerInterceptor({
   // Synchronous peek, so the common case can decline without calling suggest().
   getCachedSettings: () => settings,
   resolveOwn: (url) => deliveries.get(url),
-  isHandled: (url) => state.getTasks().some((task) => task.url === url),
+  // Matched on both: a redirect means the task ends up knowing a different URL
+  // than the one the question was asked about.
+  isHandled: (url) => state.getTasks().some((task) => sameSource(task, url)),
   onCapture: (candidate) => start(candidate),
 });
 
@@ -58,7 +60,7 @@ async function start(candidate) {
 
   const duplicate = state
     .getTasks()
-    .find((task) => task.url === candidate.url && !TERMINAL_STATUSES.has(task.status));
+    .find((task) => sameSource(task, candidate.url) && !TERMINAL_STATUSES.has(task.status));
   if (duplicate) {
     console.info('[dlman] already queued, ignoring duplicate', candidate.filename);
     return duplicate;
@@ -142,7 +144,7 @@ async function offerMedia(tabId, item) {
   if (offeredTabs.has(tabId) || prompting.has(tabId)) return;
 
   // Already downloaded or downloading it: nothing to ask.
-  if (state.getTasks().some((task) => task.url === item.url)) return;
+  if (state.getTasks().some((task) => sameSource(task, item.url))) return;
 
   offered.add(item.url);
   if (offered.size > 200) offered.delete(offered.values().next().value);
@@ -370,6 +372,10 @@ function waitForDownload(downloadId) {
     };
     chrome.downloads.onChanged.addListener(listener);
   });
+}
+
+function sameSource(task, url) {
+  return task.url === url || task.resolvedUrl === url;
 }
 
 function createTask(candidate) {
