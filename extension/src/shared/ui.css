@@ -51,6 +51,8 @@ button {
 button:hover { color: var(--txt); }
 button.primary { color: var(--txt); border-color: var(--primary-line); background: var(--primary-bg); }
 
+input[type='number'] { width: 66px; }
+
 input, select {
   font: inherit;
   font-size: 12px;

@@ -175,9 +175,15 @@ function languageRow() {
 
 // ---- small builders ---------------------------------------------------------
 
-function row(labelKey, descKey, ...controls) {
+/**
+ * The unit slot is always rendered, even when empty: without it every control
+ * would end at a different x depending on whether it had a "MB" or "kez" after
+ * it, and the column would look ragged.
+ */
+function row(labelKey, descKey, control, unitKey) {
   const wrap = document.createElement('div');
   wrap.className = 'row';
+
   const label = document.createElement('div');
   label.className = 'label';
   label.textContent = t(labelKey);
@@ -186,7 +192,15 @@ function row(labelKey, descKey, ...controls) {
     small.textContent = t(descKey);
     label.append(small);
   }
-  wrap.append(label, ...controls);
+
+  const controls = document.createElement('div');
+  controls.className = 'controls';
+  const unit = document.createElement('span');
+  unit.className = 'unit';
+  unit.textContent = unitKey ? t(unitKey) : '';
+  controls.append(control, unit);
+
+  wrap.append(label, controls);
   return wrap;
 }
 
@@ -195,9 +209,7 @@ function switchRow(labelKey, descKey, key) {
 }
 
 function numberRow(labelKey, descKey, value, min, max, onChange, unitKey) {
-  const controls = [numberInput(value, min, max, onChange)];
-  if (unitKey) controls.push(unit(unitKey));
-  return row(labelKey, descKey, ...controls);
+  return row(labelKey, descKey, numberInput(value, min, max, onChange), unitKey);
 }
 
 function toggle(checked, onChange) {
@@ -215,13 +227,20 @@ function toggle(checked, onChange) {
   return button;
 }
 
+/** Unit label for the rules table; the settings rows build their own slot. */
+function unit(key) {
+  const span = document.createElement('span');
+  span.className = 'unit';
+  span.textContent = t(key);
+  return span;
+}
+
 function numberInput(value, min, max, onChange) {
   const input = document.createElement('input');
   input.type = 'number';
   input.value = String(value);
   input.min = String(min);
   input.max = String(max);
-  input.style.width = '70px';
   input.addEventListener('change', () => {
     const parsed = Math.min(max, Math.max(min, Math.trunc(Number(input.value)) || 0));
     input.value = String(parsed);
@@ -240,13 +259,6 @@ function textInput(value, onChange) {
     commit();
   });
   return input;
-}
-
-function unit(key) {
-  const span = document.createElement('span');
-  span.className = 'unit';
-  span.textContent = t(key);
-  return span;
 }
 
 async function save() {
