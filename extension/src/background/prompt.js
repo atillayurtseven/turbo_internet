@@ -12,6 +12,22 @@ export const CHOICE_CHROME = 'chrome';
  * Returns CHOICE_CHROME whenever the question cannot be put — an unanswerable
  * prompt must never strand the download.
  */
+/** Asks about a stream spotted on a page, in that page's own tab. */
+export async function askAboutMedia({ tabId, name, label, seconds = 15 }) {
+  return inject(tabId, {
+    title: t('prompt.title'),
+    question: t('prompt.questionMedia'),
+    filename: name,
+    size: label,
+    yes: t('prompt.yesMedia'),
+    no: t('prompt.noMedia'),
+    countdown: t('prompt.dismiss'),
+    seconds,
+    manager: CHOICE_MANAGER,
+    chrome: CHOICE_CHROME,
+  });
+}
+
 export async function askUser({ filename, sizeBytes, seconds = 20 }) {
   const args = [
     {
@@ -31,20 +47,27 @@ export async function askUser({ filename, sizeBytes, seconds = 20 }) {
   // The tab that started the download can be mid-navigation or be a restricted
   // page, so the question is offered to the next best tab instead of dropped.
   for (const tabId of await candidateTabs()) {
-    try {
-      const [injection] = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: overlay,
-        args,
-      });
-      if (injection?.result) return injection.result;
-    } catch (error) {
-      console.debug('[dlman] cannot ask in tab', tabId, error?.message || error);
-    }
+    const choice = await inject(tabId, args[0]);
+    if (choice !== null) return choice;
   }
 
   console.warn('[dlman] nowhere to ask, leaving the download to Chrome');
   return CHOICE_CHROME;
+}
+
+/** Returns the user's choice, or null when the card could not be shown. */
+async function inject(tabId, strings) {
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: overlay,
+      args: [strings],
+    });
+    return injection?.result ?? null;
+  } catch (error) {
+    console.debug('[dlman] cannot ask in tab', tabId, error?.message || error);
+    return null;
+  }
 }
 
 /** Injectable tabs, most likely first: the active one, then most recent. */

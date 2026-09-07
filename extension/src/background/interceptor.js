@@ -11,7 +11,13 @@ import { sanitizeFilename } from '../shared/filetypes.js';
  * Chrome to hold the download until suggest() is called, so a cold start no
  * longer silently hands every download back to Chrome.
  */
-export function registerInterceptor({ getSettings, getCachedSettings, resolveOwn, onCapture }) {
+export function registerInterceptor({
+  getSettings,
+  getCachedSettings,
+  resolveOwn,
+  isHandled,
+  onCapture,
+}) {
   chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
     // Our own delivery download. The filename passed to chrome.downloads.download
     // is only a suggestion and loses to this event, which is why finished files
@@ -115,6 +121,14 @@ async function confirmThenTakeOver(item, verdict, onCapture) {
 
   if (choice === CHOICE_MANAGER) {
     await enqueue(item, verdict, onCapture);
+    return;
+  }
+
+  // The card can time out in a tab the user never looked at, long after they
+  // started the same file another way. Handing it back then would download it
+  // a second time, so the answer is dropped if the file is already ours.
+  if (isHandled(verdict.url)) {
+    console.info('[dlman] declined late, already downloading it', verdict.filename);
     return;
   }
 

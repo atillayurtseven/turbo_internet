@@ -84,7 +84,7 @@ function remember(tabId, item, onChange) {
   if (list.has(item.url)) return;
   list.set(item.url, item);
   while (list.size > MAX_PER_TAB) list.delete(list.keys().next().value);
-  onChange(tabId);
+  onChange(tabId, item);
 }
 
 function isExcluded(url) {

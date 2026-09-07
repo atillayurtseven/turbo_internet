@@ -92,5 +92,11 @@
   "options.general.clipboardWatchDesc": "Yalnızca sayfada kopyalanan kısa http(s) adresleri okunur; başka hiçbir şey sayfadan çıkmaz.",
   "status.remuxing": "MP4'e çevriliyor…",
   "options.general.remux": "Akışları MP4'e çevir",
-  "options.general.remuxDesc": "MPEG-TS segmentlerini MP4 kabına alır. Görüntü ve ses yeniden kodlanmaz, kopyalanır."
+  "options.general.remuxDesc": "MPEG-TS segmentlerini MP4 kabına alır. Görüntü ve ses yeniden kodlanmaz, kopyalanır.",
+  "prompt.questionMedia": "Bu sayfadaki video indirilsin mi?",
+  "prompt.yesMedia": "İndir",
+  "prompt.noMedia": "Hayır, gerek yok",
+  "prompt.dismiss": "{n} sn sonra kapanır",
+  "options.general.askMedia": "Sayfada bulunan videoları sor",
+  "options.general.askMediaDesc": "Bir akış görüldüğünde aynı kartı gösterir. Kapalıyken yalnızca popup'ta listelenir."
 }

@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   captureMode: 'ask', // 'ask' | 'always' | 'off'
   clipboardWatch: true,
   detectMedia: true,
+  askAboutMedia: true,
   remuxToMp4: true,
   promptSeconds: 20,
   probeRanges: true,
@@ -126,6 +127,7 @@ export function normalizeSettings(raw) {
     captureMode: ['ask', 'always', 'off'].includes(raw?.captureMode) ? raw.captureMode : 'ask',
     clipboardWatch: raw?.clipboardWatch !== false,
     detectMedia: raw?.detectMedia !== false,
+    askAboutMedia: raw?.askAboutMedia !== false,
     remuxToMp4: raw?.remuxToMp4 !== false,
     promptSeconds: clampInt(raw?.promptSeconds, 5, 120, d.promptSeconds),
     probeRanges: raw?.probeRanges !== false,

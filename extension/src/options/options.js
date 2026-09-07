@@ -122,6 +122,7 @@ function renderGeneral() {
   panel.replaceChildren(
     captureModeRow(),
     switchRow('options.general.detectMedia', 'options.general.detectMediaDesc', 'detectMedia'),
+    switchRow('options.general.askMedia', 'options.general.askMediaDesc', 'askAboutMedia'),
     switchRow('options.general.clipboardWatch', 'options.general.clipboardWatchDesc', 'clipboardWatch'),
     switchRow('options.general.remux', 'options.general.remuxDesc', 'remuxToMp4'),
     switchRow('options.general.probe', 'options.general.probeDesc', 'probeRanges'),

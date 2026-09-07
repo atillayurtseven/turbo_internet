@@ -92,5 +92,11 @@
   "options.general.clipboardWatchDesc": "Only short http(s) URLs copied on a page are read; nothing else leaves the page.",
   "status.remuxing": "Converting to MP4…",
   "options.general.remux": "Convert streams to MP4",
-  "options.general.remuxDesc": "Rewraps MPEG-TS segments as MP4. Video and audio are copied, not re-encoded."
+  "options.general.remuxDesc": "Rewraps MPEG-TS segments as MP4. Video and audio are copied, not re-encoded.",
+  "prompt.questionMedia": "Download this video from the page?",
+  "prompt.yesMedia": "Download",
+  "prompt.noMedia": "No thanks",
+  "prompt.dismiss": "Closing in {n} s",
+  "options.general.askMedia": "Ask about videos found on pages",
+  "options.general.askMediaDesc": "Shows the same card when a stream is spotted. Off means they are only listed in the popup."
 }

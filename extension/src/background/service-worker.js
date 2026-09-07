@@ -4,6 +4,7 @@ import { joinPath } from '../shared/filetypes.js';
 import { initI18n, t } from '../shared/i18n.js';
 import { matchRule } from './rules.js';
 import { mediaFor, registerMediaSniffer } from './media.js';
+import { CHOICE_MANAGER, askAboutMedia } from './prompt.js';
 import { registerInterceptor } from './interceptor.js';
 import { ensureOffscreen, sendToOffscreen } from './offscreen.js';
 import * as state from './state.js';
@@ -47,6 +48,7 @@ registerInterceptor({
   // Synchronous peek, so the common case can decline without calling suggest().
   getCachedSettings: () => settings,
   resolveOwn: (url) => deliveries.get(url),
+  isHandled: (url) => state.getTasks().some((task) => task.url === url),
   onCapture: (candidate) => start(candidate),
 });
 
@@ -97,8 +99,10 @@ async function installContextMenu() {
 }
 
 try {
-  registerMediaSniffer(() => {
-    if (settings?.detectMedia) broadcast();
+  registerMediaSniffer((tabId, item) => {
+    if (!settings?.detectMedia) return;
+    broadcast();
+    if (item) offerMedia(tabId, item);
   });
 } catch (error) {
   // Media detection is a nicety; a missing API must never stop downloads from
@@ -108,6 +112,39 @@ try {
 
 /** Last http(s) URL seen on a copy event, offered as a suggestion in the popup. */
 let clipboard = null;
+
+/** Streams already offered, so a page that re-requests one is not nagged. */
+const offered = new Set();
+
+/**
+ * Offers a stream found on a page. Detection alone only filled the popup list,
+ * which is easy to miss -- the same card the download flow uses is shown in the
+ * page instead.
+ */
+async function offerMedia(tabId, item) {
+  await ready;
+  if (!settings.askAboutMedia || settings.captureMode === 'off') return;
+  if (item.unsupported || offered.has(item.url)) return;
+  offered.add(item.url);
+  if (offered.size > 200) offered.delete(offered.values().next().value);
+
+  const choice = await askAboutMedia({
+    tabId,
+    name: item.name,
+    label: item.bytes > 0 ? item.label : `${item.label} · ${hostOf(item.url)}`,
+  });
+  if (choice === CHOICE_MANAGER) {
+    await startManual({ url: item.url, name: item.name, kind: item.kind });
+  }
+}
+
+function hostOf(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
 
 /** Queues something the user picked by hand: a page's media, or a pasted URL. */
 async function startManual({ url, name, kind }) {
