@@ -140,17 +140,29 @@ async function confirmThenTakeOver(item, verdict, onCapture) {
   }
 }
 
+/**
+ * Cancels Chrome's download and makes sure no trace of it is left in the list.
+ * A single erase() can lose a race with the download finishing, and the
+ * leftover row is what makes it look like the file was downloaded twice.
+ */
 async function stopChrome(id) {
   try {
     await chrome.downloads.cancel(id);
   } catch {
     // Already finished or gone; nothing to cancel.
   }
-  try {
-    await chrome.downloads.erase({ id });
-  } catch {
-    // Erasing only affects the visible list; ignore.
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await chrome.downloads.erase({ id });
+      const left = await chrome.downloads.search({ id });
+      if (left.length === 0) return;
+    } catch {
+      // Retried below.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
   }
+  console.warn('[dlman] could not remove Chrome download row', id);
 }
 
 async function takeOver(item, verdict, onCapture) {

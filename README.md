@@ -82,8 +82,14 @@ indirilmez: ses ve görüntü ayrı akışlar, mux etmek gerekir.
 HLS tarafı: master playlist'ten en yüksek bant genişlikli varyant seçilir, segmentler
 paralel indirilir, sırayla birleştirilir. Desteklenenler: TS ve fMP4 segmentler,
 `EXT-X-MAP` init segmenti, `EXT-X-BYTERANGE`, ve AES-128 (bu DRM değil; anahtar her
-istemciye açık sunulur). `SAMPLE-AES` ve Widevine reddedilir. Çıktı `.ts` veya `.mp4`
-olur — TS'i MP4'e çevirmek remux ister, o yapılmıyor.
+istemciye açık sunulur). `SAMPLE-AES` ve Widevine reddedilir.
+
+TS segmentleri **düz MP4'e** çevrilir: mux.js kodek işini yapıp parçalı MP4 üretir,
+ardından parçalar açılıp gerçek bir örnek tablosu (`stts`/`ctts`/`stsc`/`stsz`/`co64`/
+`stss`) kurulur ve normal bir `ftyp`+`moov`+`mdat` dosyası yazılır. Parçalı MP4 bir yayın
+formatıdır; dosya olarak sarılamaz ve birçok masaüstü oynatıcı kabul etmez. Görüntü ve ses
+yeniden kodlanmaz, olduğu gibi taşınır. Çevirme başarısız olursa indirme kaybolmaz, `.ts`
+olarak teslim edilir.
 
 ## Pano
 Chrome'da arka planda panoyu dinleyen bir API **yok**. Üç yol birlikte kullanılır:

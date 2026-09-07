@@ -1,12 +1,18 @@
 /**
- * Rewraps MPEG-TS segments as fragmented MP4, in order, one segment at a time.
+ * Turns MPEG-TS segments into a plain, seekable MP4.
  *
- * A classic worker on purpose: mux.js ships as UMD and importScripts is the
- * simplest way to load it without a build step.
+ * mux.js does the codec work but emits fragmented MP4, which is a streaming
+ * format: it plays from the start and nothing else -- no seeking, and several
+ * desktop players refuse it outright. So the fragments are unwrapped here: the
+ * media payload is kept as-is and a real sample table is built from the
+ * fragment headers, producing an ordinary ftyp/moov/mdat file.
  */
-importScripts(`${self.location.origin}/vendor/mux.min.js`);
+import '../../vendor/mux.min.js';
+import { OPFS_DIR } from '../shared/constants.js';
+import { readFragments } from './mp4-boxes.js';
+import { buildMoov, ftypOf, mdatHeader } from './mp4-writer.js';
 
-const OPFS_DIR = 'dlman';
+const HEADER_PART = 0;
 let stopped = false;
 
 self.onmessage = async (event) => {
@@ -18,176 +24,93 @@ self.onmessage = async (event) => {
   if (type !== 'start') return;
 
   try {
-    const written = await remux(payload);
-    self.postMessage({ type: 'done', parts: written });
+    self.postMessage({ type: 'done', parts: await remux(payload) });
   } catch (error) {
     console.error('[dlman/remux] failed', error);
     self.postMessage({ type: 'error', message: String(error?.message || error) });
   }
 };
 
-// Part 0 is the init segment and part 1 the segment index; media starts at 2.
-const INIT_PART = 0;
-const SIDX_PART = 1;
-const FIRST_MEDIA_PART = 2;
-const SIDX_TIMESCALE = 90000;
-
-async function remux({ id, count, seconds, segmentSeconds = [] }) {
+async function remux({ id, count, seconds }) {
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle(OPFS_DIR, { create: true });
 
-  const transmuxer = new muxjs.mp4.Transmuxer({ remux: true });
+  const transmuxer = new self.muxjs.mp4.Transmuxer({ remux: true });
   let init = null;
-  let pending = [];
+  let emitted = [];
   transmuxer.on('data', (segment) => {
     if (!init && segment.initSegment) init = segment.initSegment;
-    pending.push(segment.data);
+    emitted.push(segment.data);
   });
 
-  const write = async (index, bytes) => {
-    const file = await dir.getFileHandle(`${id}-mux.${index}.part`, { create: true });
-    const handle = await file.createSyncAccessHandle();
-    try {
-      handle.truncate(0);
-      handle.write(bytes, { at: 0 });
-      handle.flush();
-    } finally {
-      handle.close();
-    }
-  };
-
-  const fragments = [];
+  const tracks = new Map();
+  let payloadBytes = 0;
+  let part = HEADER_PART + 1;
 
   for (let index = 0; index < count; index += 1) {
     if (stopped) throw new DOMException('Aborted', 'AbortError');
 
-    const file = await dir.getFileHandle(`${id}.${index}.part`, { create: false });
-    const bytes = new Uint8Array(await (await file.getFile()).arrayBuffer());
-
-    pending = [];
-    transmuxer.push(bytes);
-    // Flushing per segment keeps peak memory at one segment instead of the
-    // whole video, and mux.js carries the decode time across flushes.
+    const source = await dir.getFileHandle(`${id}.${index}.part`, { create: false });
+    emitted = [];
+    transmuxer.push(new Uint8Array(await (await source.getFile()).arrayBuffer()));
+    // Flushing per source segment keeps peak memory at one segment.
     transmuxer.flush();
 
-    // The init segment has to land before any media data.
-    if (index === 0) {
-      if (!init) throw new Error('no init segment produced; stream may not be H.264/AAC');
-      // mux.js writes a zero duration, so players report only the first
-      // fragment and refuse to seek. The playlist knows the real length.
-      await write(INIT_PART, patchDurations(init, seconds));
-    }
+    for (const fragment of emitted) {
+      for (const { tracks: trafs, payload } of readFragments(fragment)) {
+        for (const traf of trafs) {
+          let track = tracks.get(traf.trackId);
+          if (!track) {
+            track = { samples: [], chunks: [] };
+            tracks.set(traf.trackId, track);
+          }
+          track.chunks.push({
+            count: traf.samples.length,
+            // Relative for now; the header's own length is added once known.
+            offset: payloadBytes + (traf.dataStart - payload.start),
+          });
+          // push(...) would spread thousands of entries and overflow the stack.
+          for (const sample of traf.samples) track.samples.push(sample);
+        }
 
-    // One part per source segment, so each maps to exactly one index entry
-    // even when mux.js splits audio and video into separate fragments.
-    const merged = concat(pending);
-    if (merged.byteLength > 0) {
-      await write(FIRST_MEDIA_PART + fragments.length, merged);
-      fragments.push({ bytes: merged.byteLength, seconds: segmentSeconds[index] ?? 0 });
+        await write(dir, id, part, fragment.subarray(payload.start, payload.end));
+        part += 1;
+        payloadBytes += payload.end - payload.start;
+      }
     }
 
     self.postMessage({ type: 'progress', done: index + 1, total: count });
   }
 
-  if (fragments.length === 0) throw new Error('remux produced nothing');
+  if (!init) throw new Error('no init segment produced; stream may not be H.264/AAC');
+  if (payloadBytes === 0) throw new Error('remux produced nothing');
 
-  // Written last because it needs every fragment's size, but it is ordered
-  // right after the init segment: without it players cannot seek.
-  await write(SIDX_PART, buildSidx(fragments));
-  return FIRST_MEDIA_PART + fragments.length;
-}
-
-function concat(chunks) {
-  const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
-  const out = new Uint8Array(total);
-  let at = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, at);
-    at += chunk.byteLength;
+  // Built twice: the first pass only measures the header, because chunk
+  // offsets must be absolute and the header sits in front of them.
+  const ftyp = ftypOf(init);
+  const headerLength = ftyp.byteLength + buildMoov(init, tracks, seconds).byteLength + 16;
+  for (const track of tracks.values()) {
+    for (const chunk of track.chunks) chunk.offset += headerLength;
   }
-  return out;
+
+  const moov = buildMoov(init, tracks, seconds);
+  const header = new Uint8Array(ftyp.byteLength + moov.byteLength + 16);
+  header.set(ftyp, 0);
+  header.set(moov, ftyp.byteLength);
+  header.set(mdatHeader(payloadBytes), ftyp.byteLength + moov.byteLength);
+  await write(dir, id, HEADER_PART, header);
+
+  return part;
 }
 
-/**
- * A segment index mapping playback time to byte ranges. Concatenated fMP4 has
- * no such map otherwise, so players can play but never seek.
- */
-function buildSidx(fragments) {
-  const box = new Uint8Array(32 + fragments.length * 12);
-  const view = new DataView(box.buffer);
-
-  view.setUint32(0, box.byteLength);
-  box.set([0x73, 0x69, 0x64, 0x78], 4); // 'sidx'
-  view.setUint32(8, 0); // version 0, flags 0
-  view.setUint32(12, 1); // reference_ID
-  view.setUint32(16, SIDX_TIMESCALE);
-  view.setUint32(20, 0); // earliest_presentation_time
-  view.setUint32(24, 0); // first_offset
-  view.setUint16(28, 0); // reserved
-  view.setUint16(30, fragments.length);
-
-  let at = 32;
-  for (const fragment of fragments) {
-    // reference_type 0 (media) in the top bit, then the fragment's size.
-    view.setUint32(at, fragment.bytes & 0x7fffffff);
-    view.setUint32(at + 4, Math.round(fragment.seconds * SIDX_TIMESCALE));
-    // starts_with_SAP = 1, SAP_type = 1: every fragment opens on a keyframe.
-    view.setUint32(at + 8, 0x90000000);
-    at += 12;
-  }
-  return box;
-}
-
-
-/**
- * Writes a real duration into the init segment's mvhd, tkhd and mdhd boxes.
- * Each carries its own timescale, so the value is converted per box.
- */
-function patchDurations(bytes, seconds) {
-  if (!seconds || seconds <= 0) return bytes;
-  const out = new Uint8Array(bytes);
-  const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
-  const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'edts']);
-
-  const walk = (start, end, movieTimescale) => {
-    let pos = start;
-    let timescale = movieTimescale;
-
-    while (pos + 8 <= end) {
-      const size = view.getUint32(pos);
-      const type = String.fromCharCode(out[pos + 4], out[pos + 5], out[pos + 6], out[pos + 7]);
-      if (size < 8 || pos + size > end) return timescale;
-
-      if (CONTAINERS.has(type)) {
-        timescale = walk(pos + 8, pos + size, timescale) ?? timescale;
-      } else if (type === 'mvhd' || type === 'mdhd') {
-        const version = out[pos + 8];
-        const scaleAt = pos + (version === 1 ? 28 : 20);
-        const scale = view.getUint32(scaleAt);
-        if (scale > 0) {
-          if (type === 'mvhd') movieTimescale = scale;
-          timescale = scale;
-          writeDuration(view, scaleAt + 4, version, Math.round(seconds * scale));
-        }
-      } else if (type === 'tkhd') {
-        const version = out[pos + 8];
-        const scale = movieTimescale || 1000;
-        writeDuration(view, pos + (version === 1 ? 36 : 28), version, Math.round(seconds * scale));
-      }
-      pos += size;
-    }
-    return timescale;
-  };
-
-  walk(0, out.byteLength, 1000);
-  return out;
-}
-
-function writeDuration(view, offset, version, value) {
-  if (version === 1) {
-    view.setUint32(offset, Math.floor(value / 2 ** 32));
-    view.setUint32(offset + 4, value >>> 0);
-  } else {
-    view.setUint32(offset, Math.min(value, 0xfffffffe));
+async function write(dir, id, index, bytes) {
+  const file = await dir.getFileHandle(`${id}-mux.${index}.part`, { create: true });
+  const handle = await file.createSyncAccessHandle();
+  try {
+    handle.truncate(0);
+    handle.write(bytes, { at: 0 });
+    handle.flush();
+  } finally {
+    handle.close();
   }
 }

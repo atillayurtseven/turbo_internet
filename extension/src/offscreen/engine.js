@@ -216,7 +216,7 @@ export class Engine {
     }
 
     this.#setStatus(task, STATUS.REMUXING);
-    const worker = new Worker(new URL('./remux-worker.js', import.meta.url));
+    const worker = new Worker(new URL('./remux-worker.js', import.meta.url), { type: 'module' });
     this.#workers.set(task.id, worker);
 
     worker.onmessage = (event) => {
