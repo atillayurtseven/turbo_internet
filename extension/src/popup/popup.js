@@ -307,6 +307,7 @@ function infoParts(task) {
     add(t('popup.noRangeSupport'), 'warn');
   }
 
+  if (task.warning === 'awaiting-confirmation') add(t('warning.awaitingConfirmation'), 'warn');
   if (task.status === STATUS.ERROR && task.error) add(describeError(task.error), 'err');
 
   return parts;
@@ -323,6 +324,7 @@ const ERROR_TEXT = new Map([
   ['stream-fragment', 'error.streamFragment'],
   ['too-short', 'error.tooShort'],
   ['range-unsupported', 'error.rangeUnsupported'],
+  ['delivery-lost', 'error.deliveryLost'],
 ]);
 
 function describeError(error) {

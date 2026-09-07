@@ -104,5 +104,7 @@
   "error.streamFragment": "This is one piece of a stream, not a whole video",
   "error.tooShort": "The file is too short to be a video",
   "error.rangeUnsupported": "The server does not allow multiple connections",
-  "error.engineUnreachable": "The download engine could not be reached"
+  "error.engineUnreachable": "The download engine could not be reached",
+  "error.deliveryLost": "The saved file could not be found; try again",
+  "warning.awaitingConfirmation": "Chrome is waiting for you to allow this file"
 }

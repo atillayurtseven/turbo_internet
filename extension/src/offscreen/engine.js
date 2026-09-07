@@ -8,7 +8,7 @@ import {
   TERMINAL_STATUSES,
 } from '../shared/constants.js';
 import { planSegments, segmentCount } from '../background/rules.js';
-import { sanitizeFilename } from '../shared/filetypes.js';
+import { nameWithExtension, sanitizeFilename } from '../shared/filetypes.js';
 import { HttpError, probe } from './probe.js';
 import { loadPlaylist } from './hls.js';
 import {
@@ -194,6 +194,9 @@ export class Engine {
       task.totalBytes = result.totalBytes || task.totalBytes;
       task.mime = task.mime || result.mime;
       if (result.filename) task.filename = sanitizeFilename(result.filename);
+      // The probe knows the content type by now, so a nameless URL can still
+      // produce something openable instead of a bare "download".
+      task.filename = nameWithExtension(task.filename, task.mime);
       task.rangeSupported = result.rangeSupported;
       console.info('[dlman/engine] probe', task.filename, {
         totalBytes: result.totalBytes,

@@ -104,5 +104,7 @@
   "error.streamFragment": "Bu bir akışın parçası, tam bir video değil",
   "error.tooShort": "Dosya bir video olamayacak kadar kısa",
   "error.rangeUnsupported": "Sunucu çoklu bağlantıya izin vermiyor",
-  "error.engineUnreachable": "İndirme motoruna ulaşılamadı"
+  "error.engineUnreachable": "İndirme motoruna ulaşılamadı",
+  "error.deliveryLost": "Kaydedilen dosya bulunamadı; yeniden dene",
+  "warning.awaitingConfirmation": "Chrome dosyayı onaylamanı bekliyor"
 }

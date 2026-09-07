@@ -431,11 +431,27 @@ async function deliver({ id, blobUrl, filename, subfolder }) {
 }
 
 chrome.downloads.onChanged.addListener((delta) => {
+  if (delta.danger) flagDanger(delta.id, delta.danger.current).catch(() => {});
   if (!delta.state) return;
   settle(delta.id, delta.state.current, delta.error?.current).catch((error) =>
     console.error('[dlman] settle failed', error),
   );
 });
+
+/**
+ * Chrome holds executables and disk images until the user confirms them. The
+ * row just sat on "finalising" with no hint of why, so the wait is named.
+ * The confirmation itself stays with the user; it is a safety prompt.
+ */
+async function flagDanger(downloadId, danger) {
+  await ready;
+  const task = taskForDownload(downloadId);
+  if (!task || TERMINAL_STATUSES.has(task.status)) return;
+  const waiting = danger && danger !== 'safe' && danger !== 'accepted';
+  if (Boolean(task.warning) === Boolean(waiting)) return;
+  await state.upsert({ id: task.id, warning: waiting ? 'awaiting-confirmation' : '' });
+  broadcast();
+}
 
 async function settle(downloadId, downloadState, error) {
   if (downloadState !== 'complete' && downloadState !== 'interrupted') return;
@@ -451,6 +467,7 @@ async function settle(downloadId, downloadState, error) {
       status: STATUS.COMPLETED,
       completedAt: Date.now(),
       deliveryUrl: '',
+      warning: '',
       speed: 0,
     });
   } else {
@@ -472,13 +489,25 @@ async function settle(downloadId, downloadState, error) {
 async function sweepDeliveries() {
   await ready;
   for (const task of state.getTasks()) {
-    // Keyed on deliveryUrl, not status: it is set only at delivery, so it marks
-    // exactly the tasks Chrome is writing, whatever the status says.
-    if (!task.deliveryUrl || !task.chromeDownloadId) continue;
     if (TERMINAL_STATUSES.has(task.status)) continue;
+    // deliveryUrl marks tasks Chrome is writing, but rows left over from before
+    // that field existed only have their status to go on -- and a task stuck on
+    // "finalising" has nothing else to wait for either way.
+    const delivering = Boolean(task.deliveryUrl) || task.status === STATUS.ASSEMBLING;
+    if (!delivering) continue;
+
+    if (!task.chromeDownloadId) {
+      // Delivery never even started; leave it retryable rather than hanging.
+      await state.upsert({ id: task.id, status: STATUS.ERROR, error: 'delivery-lost' });
+      continue;
+    }
     const [item] = await chrome.downloads.search({ id: task.chromeDownloadId });
-    if (item) await settle(task.chromeDownloadId, item.state, item.error);
-    else await state.upsert({ id: task.id, status: STATUS.ERROR, error: 'delivery-lost' });
+    if (!item) {
+      await state.upsert({ id: task.id, status: STATUS.ERROR, error: 'delivery-lost' });
+      continue;
+    }
+    await flagDanger(task.chromeDownloadId, item.danger);
+    await settle(task.chromeDownloadId, item.state, item.error);
   }
   broadcast();
 }

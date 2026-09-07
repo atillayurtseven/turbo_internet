@@ -78,3 +78,37 @@ export function filenameFromDisposition(header = '') {
   const plain = /filename\s*=\s*("([^"]*)"|[^;]+)/i.exec(header);
   return plain ? (plain[2] ?? plain[1]).trim() : '';
 }
+
+/** Common content types, for naming a file the URL did not name. */
+const MIME_EXTENSIONS = new Map([
+  ['application/zip', 'zip'],
+  ['application/x-7z-compressed', '7z'],
+  ['application/x-rar-compressed', 'rar'],
+  ['application/gzip', 'gz'],
+  ['application/pdf', 'pdf'],
+  ['application/x-apple-diskimage', 'dmg'],
+  ['application/x-msdownload', 'exe'],
+  ['application/x-msi', 'msi'],
+  ['application/vnd.debian.binary-package', 'deb'],
+  ['application/x-iso9660-image', 'iso'],
+  ['video/mp4', 'mp4'],
+  ['video/x-matroska', 'mkv'],
+  ['video/quicktime', 'mov'],
+  ['video/webm', 'webm'],
+  ['video/mp2t', 'ts'],
+  ['audio/mpeg', 'mp3'],
+  ['audio/mp4', 'm4a'],
+  ['image/jpeg', 'jpg'],
+  ['image/png', 'png'],
+]);
+
+/**
+ * Gives an extensionless name one derived from the content type. A file saved
+ * as plain "download" tells the user nothing and opens in nothing.
+ */
+export function nameWithExtension(filename, mime) {
+  const name = sanitizeFilename(filename, 'download');
+  if (extensionOf(name)) return name;
+  const ext = MIME_EXTENSIONS.get(String(mime || '').split(';')[0].trim().toLowerCase());
+  return ext ? `${name}.${ext}` : name;
+}
