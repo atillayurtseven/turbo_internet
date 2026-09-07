@@ -1,122 +1,136 @@
 # chrome_dlman
 
-Dosya tipi tanıyan, kural bazlı **parçalı (multi-connection)** Chrome indirme yöneticisi.
+A Chrome (MV3) download manager that recognises file types and, where the
+server allows it, downloads them over several connections at once.
 
-## Durum
-- [x] Mockup — `mockup/index.html`
-- [x] MV3 eklenti çekirdeği — `extension/`
-- [x] Range probe + segmentli indirme motoru + OPFS
-- [x] i18n (en / tr, çalışma anında değiştirilebilir)
-- [ ] Torrent (native messaging yardımcısı ile, ayrı aşama)
+## Install
 
-## Kurulum
-`chrome://extensions` → Geliştirici modu → **Paketlenmemiş öğe yükle** → `extension/` klasörü.
+`chrome://extensions` → Developer mode → **Load unpacked** → pick `extension/`.
 
-## Mimari
+## Architecture
 
     ┌─ service worker ─────────┐   coordinator
-    │ interceptor  rules       │   • chrome.downloads.onDeterminingFilename ile yakala
-    │ settings     state       │   • bitmiş blob'u chrome.downloads'a ver
+    │ interceptor  rules       │   • takes downloads over via
+    │ settings     state       │     chrome.downloads.onDeterminingFilename
+    │ referer      delivery    │   • hands the finished blob back to Chrome
     └───────────┬──────────────┘
-                │ chrome.runtime mesajları
-    ┌───────────┴──────────────┐   offscreen document (30 sn idle timeout'a tabi değil)
-    │ engine  probe  opfs      │   • kuyruk, eşzamanlılık, hız, ilerleme
-    └───────────┬──────────────┘
-                │ Worker (indirme başına bir tane)
-    ┌───────────┴──────────────┐
-    │ segment-worker           │   • N paralel Range fetch
-    │ FileSystemSyncAccessHandle│  • her chunk doğrudan kendi byte offset'ine yazılır
-    └──────────────────────────┘
+                │ chrome.runtime messages
+    ┌───────────┴──────────────┐   offscreen document
+    │ engine  probe  opfs      │   • queue, concurrency, rate, progress
+    └───────────┬──────────────┘   • not subject to the 30 s idle timeout
+                │ one worker per download
+    ┌───────────┴──────────────────────────────┐
+    │ segment-worker   parallel Range fetches  │
+    │ hls-worker       playlist segments       │
+    │ remux-worker     MPEG-TS → plain MP4     │
+    │ hash-worker      SHA-256                 │
+    └──────────────────────────────────────────┘
 
-**Neden offscreen document?** MV3 service worker'ı ~30 sn boşta kalınca öldürülür ve
-`URL.createObjectURL` service worker'da yok. Offscreen belge her ikisini de çözer.
+**Why an offscreen document?** An MV3 service worker is killed after roughly
+30 seconds idle, and `URL.createObjectURL` does not exist there. The offscreen
+document solves both.
 
-**Neden parça başına ayrı OPFS dosyası?** Ölçtük: OPFS'te tek bir dosyayı ~2 GB üstüne
-`truncate()` ile büyütmek **sessizce başarısız oluyor** — hata fırlatmıyor, dosya 0 byte
-kalıyor (kota 11 GB olsa bile). Bu yüzden her segment kendi dosyasına yazılır ve sonda
-`new Blob([p0, p1, ...])` ile birleştirilir. Blob parçaları diskteki dosyalara referans
-verir, belleğe okunmaz. Segment sayısı, hiçbir parça 1 GB'ı geçmeyecek şekilde artırılır.
+**Why one OPFS file per part?** Measured: growing a single OPFS file past about
+2 GB fails *silently* — `truncate()` reports no error and leaves the file empty,
+even with 11 GB of quota available. Each part is therefore capped at 1 GB and
+the finished file is joined with `new Blob([...])`, which references the parts
+on disk rather than loading them into memory.
 
-## Akış
-1. `onDeterminingFilename` → kural eşleşmesi → eşleşirse Chrome indirmesi iptal + erase
-2. `GET Range: bytes=0-0` probe → `Content-Range` toplam boyutu ve 206 range desteğini verir
-   (HEAD birçok CDN'de yanıltıcı olduğu için tercih edilmedi)
-3. Segment planı → worker → paralel indirme, parça başına retry + exponential backoff
-4. Bitince blob URL → `chrome.downloads.download()` → `.part` silinir
+## How a download runs
 
-## Kullanıcıya sorma
-Varsayılan mod **"her seferinde sor"**. Eşleşen bir indirme başlayınca Chrome'un indirmesi
-duraklatılır ve aktif sekmenin sağ üstünde bir kart çıkar. "Yönetici ile indir" → Chrome
-indirmesi iptal edilip motora devredilir. "Hayır" / Esc / 20 sn sessizlik → Chrome'un
-indirmesi kaldığı yerden devam eder. Kart enjekte edilemeyen sayfalarda (chrome://, Web
-Store, PDF görüntüleyici) soru sorulmaz ve indirme Chrome'da kalır.
+1. `onDeterminingFilename` fires → rules decide → if matched, Chrome's own
+   download is cancelled and erased
+2. `GET Range: bytes=0-0` probes the server. This is preferred over HEAD, which
+   many CDNs answer with a different status or no `Content-Length`; one round
+   trip yields both range support and the total size
+3. The file is split into parts, each part downloaded on its own connection,
+   with per-part retry and exponential backoff
+4. Parts are size-checked, optionally hashed, joined, and written to disk
 
-Ayarlardan "her zaman devral" veya "asla devralma" seçilebilir.
+`If-Range` carries the file's `ETag`/`Last-Modified` on every part request, so a
+mirror serving a different build cannot be stitched into the middle of a file.
 
 ## Work stealing
-Erken biten bir bağlantı boşta beklemez: en çok işi kalan parçayı ikiye böler ve kuyruk
-yarısını devralır. Korumalar:
-- kalan iş 2 MB'ın altındaysa bölünmez (bağlantı maliyeti kazancı aşar)
-- bölünecek parçanın kendi %90'ı bittiyse dokunulmaz
-- toplam parça sayısı 32'yi geçemez
 
-Bu üçü birlikte bölmenin kendi kuyruğunu kovalamasını imkânsız kılar: her bölme en az
-1 MB'lık yeni iş yaratır ve toplam boyut sonludur.
+A connection that finishes early takes over the half of whichever part has the
+most left to do. Guards, so splitting cannot chase its own tail:
 
-## Doğrulama
-Uçtan uca test, Chrome'u `--load-extension` ile başlatıp CDP üzerinden konsolu okuyarak
-yapıldı (`--disable-features=DisableLoadExtensionCommandLineSwitch` gerekiyor; Chrome 137+
-bu anahtarı varsayılan olarak kapatıyor). 10 MB'lık bir dosya 4 parça hâlinde indirildi;
-sonucun SHA-256'sı sunucudaki dosyayla birebir aynı çıktı.
+- nothing is split when under 2 MB remains
+- a part already 90 % done is left alone
+- at most 32 parts
 
-Work stealing ayrıca Range destekli yerel bir test sunucusuyla doğrulandı: dosyanın son
-çeyreği kasıtlı yavaşlatıldı, 3 bölme tetiklendi (seg3→seg4, seg3→seg5, seg4→seg6) ve
-40 MB'lık sonucun SHA-256'sı referansla birebir eşleşti.
+## Streams
 
-## Medya algılama ve HLS
-Sayfadan geçen istekler izlenir; bulunan HLS akışları ve büyük video dosyaları popup'ta
-listelenir. **YouTube kapsam dışıdır** — hem kullanım şartlarına aykırı hem de Chrome Web
-Store politikaları bunu yapan eklentileri yasaklıyor. DASH (`.mpd`) tespit edilir ama
-indirilmez: ses ve görüntü ayrı akışlar, mux etmek gerekir.
+Requests are watched for playable media; HLS streams and large progressive files
+found on a page are offered in the popup. A playlist is only offered once it has
+been fetched successfully and starts with `#EXTM3U` — offering something that
+cannot be downloaded reads as a broken extension rather than a server saying no.
 
-HLS tarafı: master playlist'ten en yüksek bant genişlikli varyant seçilir, segmentler
-paralel indirilir, sırayla birleştirilir. Desteklenenler: TS ve fMP4 segmentler,
-`EXT-X-MAP` init segmenti, `EXT-X-BYTERANGE`, ve AES-128 (bu DRM değil; anahtar her
-istemciye açık sunulur). `SAMPLE-AES` ve Widevine reddedilir.
+Supported: TS and fMP4 segments, `EXT-X-MAP`, `EXT-X-BYTERANGE`, and AES-128
+(transport encryption whose key is served openly, not DRM). `SAMPLE-AES` and
+anything Widevine-backed are refused.
 
-TS segmentleri **düz MP4'e** çevrilir: mux.js kodek işini yapıp parçalı MP4 üretir,
-ardından parçalar açılıp gerçek bir örnek tablosu (`stts`/`ctts`/`stsc`/`stsz`/`co64`/
-`stss`) kurulur ve normal bir `ftyp`+`moov`+`mdat` dosyası yazılır. Parçalı MP4 bir yayın
-formatıdır; dosya olarak sarılamaz ve birçok masaüstü oynatıcı kabul etmez. Görüntü ve ses
-yeniden kodlanmaz, olduğu gibi taşınır. Çevirme başarısız olursa indirme kaybolmaz, `.ts`
-olarak teslim edilir.
+TS streams are converted to a **plain, seekable MP4**: mux.js does the codec
+work and emits fragmented MP4, then the fragments are unwrapped and a real
+sample table (`stts`/`ctts`/`stsc`/`stsz`/`co64`/`stss`) is built. Fragmented
+MP4 is a streaming format — it plays from the start and nothing else, and many
+desktop players refuse it. Nothing is re-encoded. If conversion fails the
+download is still delivered, as `.ts`.
 
-## Pano
-Chrome'da arka planda panoyu dinleyen bir API **yok**. Üç yol birlikte kullanılır:
-sayfalardaki kopyalama olayını dinleyen içerik betiği (yalnızca kısa http(s) adresleri
-gönderir), popup açıldığında panoyu okuma, ve elle URL yapıştırma alanı.
+**Out of scope:** YouTube and comparable platforms. Downloading from them breaks
+their terms of service, and Chrome Web Store policy forbids extensions that do.
 
-## Ayarlar
-Değişiklikler anında kaydedilir; Kaydet düğmesi yok. Kural tablosundaki **min. boyut**
-sütununa dikkat: varsayılan olarak kurulum dosyaları 5 MB, arşivler 20 MB, ISO'lar
-50 MB altındaysa Chrome'a bırakılır. Hiç yakalanmıyorsa önce bu eşiğe bakın —
-service worker konsolunda `[dlman] skipped below-min-size` satırı görünür.
+## Sessions
 
-## Bilinen sınırlar
-- Tek bağlantıya düşen (Range desteklemeyen) sunucularda dosya 1 GB'ı geçemez.
-- Dosya diske yazılana kadar tarayıcı depolamasında bir kopyası durur; 6 GB'lık bir ISO
-  geçici olarak ~13 GB yer ister. Kota yetmezse indirme baştan reddedilir.
-- `Referer`, fetch'te yasaklı bir header. `referrer` + `referrerPolicy: 'unsafe-url'` ile
-  aktarılıyor; katı hotlink korumalı sunucularda declarativeNetRequest kuralı gerekebilir.
-- Range desteklemeyen sunucularda duraklat/devam et yoktur — devam, baştan başlatır.
-- Tarayıcı yeniden başladığında aktif indirmeler *paused* olarak geri gelir; `.part`
-  dosyaları OPFS'te durduğu için kaldıkları yerden devam ederler.
+Downloads carry the browser's own cookies, so a file behind a login works.
+`Referer` is set through a declarative session rule rather than `fetch`, which
+cannot set it: it is a forbidden header, and the `referrer` option is silently
+dropped cross-origin, which made hotlink-protected servers answer 403.
 
-## Dil ekleme
-`src/locales/<kod>.json` ekle ve `src/shared/i18n.js` içindeki `SUPPORTED_LOCALES`
-listesine kodu yaz. `_locales/` yalnızca manifest metinleri içindir.
+## Clipboard
 
-## Yapılacaklar
-- Native messaging yardımcısı (torrent + Range'siz sunucularda devam)
-- İndirme geçmişi sayfası
-- Bağlam menüsünden "bunu parçalı indir"
+Chrome has no background clipboard event. Three paths are used instead: a copy
+listener on pages (only short http(s) URLs ever leave the page), a clipboard
+read when the popup opens, and a paste field. Both can be switched off.
+
+## Settings
+
+Changes save immediately; there is no Save button. Note the **minimum size**
+column: by default disk images under 20 MB, archives under 10 MB, video under
+5 MB and installers under 2 MB are left to Chrome. If nothing is being taken
+over, check that first — the service worker console logs
+`[dlman] skipped below-min-size`.
+
+Optional SHA-256 after downloading, for comparing against a published checksum.
+Reading the file back takes a while on large downloads, so it is off by default.
+
+## Verification
+
+Driven through the Chrome DevTools Protocol against a local server
+(`--load-extension` needs `--disable-features=DisableLoadExtensionCommandLineSwitch`
+on Chrome 137+).
+
+- ten scenarios: ranged, no-range fallback, 1 KB, zero bytes, 404, transient
+  500, pause, resume, cancel, duplicate suppression
+- 10 GB local download: SHA-256 identical to the reference, 32 parts, work
+  stealing active
+- 6 GB Ubuntu ISO: SHA-256 identical to the checksum Ubuntu publishes
+- HLS: TS stream (64 segments) and fMP4 stream (101 segments) both produce
+  valid, seekable output
+- `Referer`: a download blocked with 403 without it completes with it
+
+## Known limits
+
+- Falling back to a single connection caps a file at 1 GB
+- A copy of the file lives in browser storage until it reaches disk, so a 6 GB
+  download temporarily needs about 12 GB
+- Resuming is unavailable on servers that ignore `Range`; resume restarts
+
+## Adding a language
+
+Add `src/locales/<code>.json` and list the code in `SUPPORTED_LOCALES` in
+`src/shared/i18n.js`. `_locales/` only covers manifest strings.
+
+## Third party
+
+`extension/vendor/mux.min.js` — mux.js 7.0.3, Apache-2.0.

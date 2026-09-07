@@ -1,7 +1,0 @@
-[
-  {
-    "file": "extension/src/offscreen/remux-worker.js",
-    "issue": "mux.js UMD 'global/window' bağımlılığı worker'da window olmadığı için TypeError atar",
-    "why": "Kanıtla çürütüldü: remux worker uçtan uca çalıştı ve 487.656.579 baytlık geçerli bir düz MP4 üretti (ftyp+moov+mdat, örnek toplamı mdat ile birebir). Bu kod yolu gerçekten koşuluyor."
-  }
-]

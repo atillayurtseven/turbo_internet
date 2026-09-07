@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -83,8 +83,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>chrome_dlman — Arayüz Mockup</h1>
-  <div class="sub">Dosya tipi tanıma + kural bazlı parçalı (multi-connection) indirme</div>
+  <h1>chrome_dlman — interface mockup</h1>
+  <div class="sub">File-type rules and multi-connection downloading</div>
 
   <div class="grid">
 
@@ -93,7 +93,7 @@
       <header><span class="t">Popup (toolbar)</span><span class="tag">380×560</span></header>
       <div class="pop-top">
         <div class="logo">⬇</div>
-        <div><div class="n">Download Manager</div><div class="s">3 aktif · 12.4 MB/s</div></div>
+        <div><div class="n">Download Manager</div><div class="s">3 active · 12.4 MB/s</div></div>
         <button class="ico-btn">⚙</button>
       </div>
 
@@ -102,7 +102,7 @@
           <div class="ft iso">ISO</div>
           <div class="meta">
             <div class="fn">ubuntu-24.04.2-desktop-amd64.iso</div>
-            <div class="mi"><span>2.1 / 6.0 GB</span><span>8.7 MB/s</span><span>~7 dk</span><span class="chip p">8 parça</span></div>
+            <div class="mi"><span>2.1 / 6.0 GB</span><span>8.7 MB/s</span><span>~7 dk</span><span class="chip p">8 parts</span></div>
           </div>
         </div>
         <div class="bar">
@@ -115,7 +115,7 @@
           <div class="seg" style="flex:1"><i style="width:14%"></i></div>
           <div class="seg" style="flex:1"><i style="width:5%"></i></div>
         </div>
-        <div class="acts"><button class="pri">Duraklat</button><button>İptal</button><button>Klasör</button></div>
+        <div class="acts"><button class="pri">Pause</button><button>Cancel</button><button>Folder</button></div>
       </div>
 
       <div class="dl">
@@ -123,7 +123,7 @@
           <div class="ft zip">ZIP</div>
           <div class="meta">
             <div class="fn">node-modules-backup-2026.zip</div>
-            <div class="mi"><span>318 / 940 MB</span><span>3.4 MB/s</span><span class="chip p">4 parça</span></div>
+            <div class="mi"><span>318 / 940 MB</span><span>3.4 MB/s</span><span class="chip p">4 parts</span></div>
           </div>
         </div>
         <div class="bar">
@@ -132,7 +132,7 @@
           <div class="seg" style="flex:1"><i style="width:29%"></i></div>
           <div class="seg" style="flex:1"><i style="width:9%"></i></div>
         </div>
-        <div class="acts"><button class="pri">Duraklat</button><button>İptal</button></div>
+        <div class="acts"><button class="pri">Pause</button><button>Cancel</button></div>
       </div>
 
       <div class="dl">
@@ -140,7 +140,7 @@
           <div class="ft pdf">PDF</div>
           <div class="meta">
             <div class="fn">rapor-q3-final.pdf</div>
-            <div class="mi"><span>1.2 MB</span><span class="chip">tek bağlantı</span><span style="color:var(--warn)">sunucu Range desteklemiyor</span></div>
+            <div class="mi"><span>1.2 MB</span><span class="chip">single connection</span><span style="color:var(--warn)">server does not support ranges</span></div>
           </div>
         </div>
         <div class="bar"><div class="seg" style="flex:1"><i style="width:88%"></i></div></div>
@@ -151,24 +151,24 @@
           <div class="ft vid">MP4</div>
           <div class="meta">
             <div class="fn">tanitim-video-4k.mp4</div>
-            <div class="mi"><span>1.4 GB</span><span class="chip s">tamamlandı</span><span>02:41</span></div>
+            <div class="mi"><span>1.4 GB</span><span class="chip s">completed</span><span>02:41</span></div>
           </div>
         </div>
         <div class="bar"><div class="seg done" style="flex:1"><i style="width:100%"></i></div></div>
       </div>
 
-      <div class="pop-foot"><span>Kuyruk: <b>2</b></span><span>Bugün: <b>7.9 GB</b></span><span style="margin-left:auto">Tümünü gör →</span></div>
+      <div class="pop-foot"><span>Queue: <b>2</b></span><span>Today: <b>7.9 GB</b></span><span style="margin-left:auto">See all →</span></div>
     </div>
 
     <!-- ============ OPTIONS ============ -->
     <div class="card">
-      <header><span class="t">Ayarlar (options page)</span><span class="tag">chrome://extensions</span></header>
-      <div class="tabs"><span class="act">Dosya Tipleri</span><span>Genel</span><span>Kurallar</span><span>Geçmiş</span></div>
+      <header><span class="t">Settings (options page)</span><span class="tag">chrome://extensions</span></header>
+      <div class="tabs"><span class="act">File types</span><span>General</span><span>Rules</span><span>History</span></div>
       <div class="body">
 
-        <div class="seclabel">Tip bazlı indirme kuralları</div>
+        <div class="seclabel">Per-type download rules</div>
         <table>
-          <thead><tr><th>Uzantı / MIME</th><th>Yakala</th><th>Parça</th><th>Min. boyut</th><th>Klasör</th></tr></thead>
+          <thead><tr><th>Extensions / MIME</th><th>Capture</th><th>Parts</th><th>Min. size</th><th>Folder</th></tr></thead>
           <tbody>
             <tr>
               <td><span class="ext">.iso .img .dmg</span><br><small style="color:var(--dim)">application/octet-stream</small></td>
@@ -182,7 +182,7 @@
               <td><span class="sw on"></span></td>
               <td><select><option>4</option></select></td>
               <td><input type="number" value="20"> MB</td>
-              <td><input type="text" value="Arşiv" size="8"></td>
+              <td><input type="text" value="Archives" size="8"></td>
             </tr>
             <tr>
               <td><span class="ext">.mp4 .mkv .mov</span></td>
@@ -196,29 +196,28 @@
               <td><span class="sw on"></span></td>
               <td><select><option>4</option></select></td>
               <td><input type="number" value="5"> MB</td>
-              <td><input type="text" value="Kurulum" size="8"></td>
+              <td><input type="text" value="Installers" size="8"></td>
             </tr>
             <tr>
               <td><span class="ext">.pdf .docx .xlsx</span></td>
               <td><span class="sw"></span></td>
               <td><select disabled><option>1</option></select></td>
               <td><input type="number" value="0" disabled> MB</td>
-              <td><input type="text" value="Belge" size="8"></td>
+              <td><input type="text" value="Documents" size="8"></td>
             </tr>
           </tbody>
         </table>
 
-        <div class="seclabel">Genel</div>
-        <div class="row"><div class="lb">Chrome indirmelerini devral<small>Uygun indirmeler yakalanır, Chrome'un kendi indiricisi iptal edilir</small></div><span class="sw on"></span></div>
-        <div class="row"><div class="lb">Range/Accept-Ranges testi<small>HEAD isteği ile sunucu çoklu bağlantıya izin veriyor mu kontrol et</small></div><span class="sw on"></span></div>
-        <div class="row"><div class="lb">Desteklenmiyorsa tek bağlantıya düş<small>Otomatik fallback</small></div><span class="sw on"></span></div>
-        <div class="row"><div class="lb">Eşzamanlı indirme limiti<small>Toplam aktif dosya sayısı</small></div><input type="number" value="3"></div>
-        <div class="row"><div class="lb">Hız limiti<small>0 = sınırsız</small></div><input type="number" value="0"> <span style="color:var(--dim);font-size:12px">MB/s</span></div>
-        <div class="row"><div class="lb">Yeniden deneme<small>Parça hatasında</small></div><input type="number" value="5"> <span style="color:var(--dim);font-size:12px">kez</span></div>
+        <div class="seclabel">General</div>
+        <div class="row"><div class="lb">Take over Chrome downloads<small>Matching downloads are captured and Chrome's own download is cancelled</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="lb">Accept-Ranges probe<small>Check whether the server allows multiple connections</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="lb">Desteklenmiyorsa single connectionya düş<small>Automatic fallback</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="lb">Concurrent downloads<small>Total files downloading at once</small></div><input type="number" value="3"></div>
+        <div class="row"><div class="lb">Speed limit<small>0 = unlimited</small></div><input type="number" value="0"> <span style="color:var(--dim);font-size:12px">MB/s</span></div>
+        <div class="row"><div class="lb">Retries<small>Parts hatasında</small></div><input type="number" value="5"> <span style="color:var(--dim);font-size:12px">times</span></div>
 
         <div class="note">
-          <b>Teknik not (mockup'ta gösterilmiyor):</b> MV3 eklentisi <code>chrome.downloads.onDeterminingFilename</code> ile indirmeyi yakalayıp iptal eder, ardından <code>fetch</code> + <code>Range</code> header ile N paralel istek atar. Parçalar <code>OPFS</code>'e yazılır, birleştirilip <code>chrome.downloads.download(blobUrl)</code> ile diske verilir. Bu, çok büyük dosyalarda disk/bellek sınırına takılır — 4 GB+ senaryosu için <b>Native Messaging + küçük yerel yardımcı (Rust/Go)</b> alternatifi ikinci aşamada değerlendirilmeli.
-        </div>
+          <b>Implementation note (not shown in the mockup):</b> an MV3 extension captures the download with <code>chrome.downloads.onDeterminingFilename</code>, cancels it, then issues N parallel <code>fetch</code> requests with a <code>Range</code> header. Parts are written to <code>OPFS</code>, joined, and handed back through <code>chrome.downloads.download(blobUrl)</code>.</div>
       </div>
     </div>
 
