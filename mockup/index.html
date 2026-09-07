@@ -211,10 +211,10 @@
         <div class="seclabel">General</div>
         <div class="row"><div class="lb">Take over Chrome downloads<small>Matching downloads are captured and Chrome's own download is cancelled</small></div><span class="sw on"></span></div>
         <div class="row"><div class="lb">Accept-Ranges probe<small>Check whether the server allows multiple connections</small></div><span class="sw on"></span></div>
-        <div class="row"><div class="lb">Desteklenmiyorsa single connectionya düş<small>Automatic fallback</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="lb">Fall back to a single connection<small>Automatic fallback</small></div><span class="sw on"></span></div>
         <div class="row"><div class="lb">Concurrent downloads<small>Total files downloading at once</small></div><input type="number" value="3"></div>
         <div class="row"><div class="lb">Speed limit<small>0 = unlimited</small></div><input type="number" value="0"> <span style="color:var(--dim);font-size:12px">MB/s</span></div>
-        <div class="row"><div class="lb">Retries<small>Parts hatasında</small></div><input type="number" value="5"> <span style="color:var(--dim);font-size:12px">times</span></div>
+        <div class="row"><div class="lb">Retries<small>Per failed part</small></div><input type="number" value="5"> <span style="color:var(--dim);font-size:12px">times</span></div>
 
         <div class="note">
           <b>Implementation note (not shown in the mockup):</b> an MV3 extension captures the download with <code>chrome.downloads.onDeterminingFilename</code>, cancels it, then issues N parallel <code>fetch</code> requests with a <code>Range</code> header. Parts are written to <code>OPFS</code>, joined, and handed back through <code>chrome.downloads.download(blobUrl)</code>.</div>
