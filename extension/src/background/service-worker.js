@@ -1,8 +1,9 @@
-import { ACTIVE_STATUSES, MSG, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
+import { ACTIVE_STATUSES, KIND, MSG, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
 import { loadSettings, onSettingsChanged } from '../shared/settings.js';
 import { joinPath } from '../shared/filetypes.js';
 import { initI18n, t } from '../shared/i18n.js';
 import { matchRule } from './rules.js';
+import { mediaFor, registerMediaSniffer } from './media.js';
 import { registerInterceptor } from './interceptor.js';
 import { ensureOffscreen, sendToOffscreen } from './offscreen.js';
 import * as state from './state.js';
@@ -91,6 +92,35 @@ async function installContextMenu() {
   });
 }
 
+registerMediaSniffer(() => {
+  if (settings?.detectMedia) broadcast();
+});
+
+/** Last http(s) URL seen on a copy event, offered as a suggestion in the popup. */
+let clipboard = null;
+
+/** Queues something the user picked by hand: a page's media, or a pasted URL. */
+async function startManual({ url, name, kind }) {
+  await ready;
+  const filename = sanitizeManualName(name, url);
+  const matched = matchRule(settings.rules, { filename, url, mime: '' });
+  return start({
+    url,
+    filename,
+    mime: '',
+    referrer: '',
+    sizeHint: 0,
+    kind: kind === KIND.HLS ? KIND.HLS : KIND.FILE,
+    // Picked deliberately, so neither the size gate nor capture flags apply.
+    rule: { ...(matched ?? fallbackRule()), minSizeBytes: 0 },
+  });
+}
+
+function sanitizeManualName(name, url) {
+  const raw = name || decodeURIComponent(new URL(url).pathname.split('/').pop() || 'download');
+  return raw.replace(/[\\/]/g, '_').slice(0, 180) || 'download';
+}
+
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== MENU_ID || !info.linkUrl) return;
   await ready;
@@ -169,6 +199,26 @@ async function handleMessage(message, sender) {
       await sendToOffscreen(MSG.CANCEL, payload).catch(() => {});
       await state.remove(payload?.id);
       broadcast();
+      return { ok: true };
+
+    case MSG.CLIPBOARD_HIT:
+      if (settings.clipboardWatch && payload?.url) {
+        clipboard = { url: payload.url, at: Date.now() };
+        broadcast();
+      }
+      return { ok: true };
+
+    case MSG.GET_CLIPBOARD:
+      return { ok: true, clipboard };
+
+    case MSG.GET_MEDIA: {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      return { ok: true, media: tab ? mediaFor(tab.id) : [] };
+    }
+
+    case MSG.DOWNLOAD_MEDIA:
+    case MSG.DOWNLOAD_URL:
+      await startManual(payload ?? {});
       return { ok: true };
 
     case MSG.CLEAR_COMPLETED:
@@ -253,6 +303,7 @@ function waitForDownload(downloadId) {
 function createTask(candidate) {
   return {
     id: crypto.randomUUID(),
+    kind: candidate.kind ?? KIND.FILE,
     url: candidate.url,
     filename: candidate.filename,
     mime: candidate.mime,

@@ -121,6 +121,8 @@ function renderGeneral() {
   const panel = document.getElementById('general');
   panel.replaceChildren(
     captureModeRow(),
+    switchRow('options.general.detectMedia', 'options.general.detectMediaDesc', 'detectMedia'),
+    switchRow('options.general.clipboardWatch', 'options.general.clipboardWatchDesc', 'clipboardWatch'),
     switchRow('options.general.probe', 'options.general.probeDesc', 'probeRanges'),
     switchRow('options.general.fallback', 'options.general.fallbackDesc', 'fallbackSingleConnection'),
     numberRow('options.general.maxConcurrent', 'options.general.maxConcurrentDesc',
@@ -205,7 +207,9 @@ function row(labelKey, descKey, control, unitKey) {
 }
 
 function switchRow(labelKey, descKey, key) {
-  return row(labelKey, descKey, toggle(settings[key], (value) => { settings[key] = value; }));
+  return row(labelKey, descKey, toggle(settings[key], (value) => {
+    settings[key] = value;
+  }));
 }
 
 function numberRow(labelKey, descKey, value, min, max, onChange, unitKey) {

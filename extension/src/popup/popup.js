@@ -20,11 +20,123 @@ async function init() {
     await send(MSG.CLEAR_COMPLETED, { all: event.shiftKey });
   });
 
+  document.getElementById('paste-go').addEventListener('click', submitPaste);
+  document.getElementById('paste-url').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') submitPaste();
+  });
+
   chrome.runtime.onMessage.addListener((message) => {
-    if (message?.target === 'ui' && message.type === MSG.STATE_BROADCAST) render(message.payload);
+    if (message?.target !== 'ui' || message.type !== MSG.STATE_BROADCAST) return;
+    render(message.payload);
+    renderSources();
   });
 
   render(state?.tasks ?? []);
+  renderSources();
+}
+
+async function submitPaste() {
+  const input = document.getElementById('paste-url');
+  const url = input.value.trim();
+  if (!/^https?:\/\/\S+$/i.test(url)) return;
+  input.value = '';
+  await send(MSG.DOWNLOAD_URL, { url, kind: /\.m3u8(\?|$)/i.test(url) ? 'hls' : 'file' });
+}
+
+/**
+ * Everything the user can start by hand: media spotted on the page, and the
+ * last copied link. Chrome cannot watch the clipboard in the background, so
+ * the OS clipboard is read here, when the popup opens and has focus.
+ */
+async function renderSources() {
+  const box = document.getElementById('sources');
+  const [media, copied] = await Promise.all([
+    send(MSG.GET_MEDIA).then((r) => r?.media ?? []),
+    readClipboard(),
+  ]);
+
+  const rows = [];
+  if (copied) rows.push(sourceRow({ ...copied, heading: t('popup.clipboard') }));
+  for (const item of media) rows.push(sourceRow({ ...item, heading: t('popup.mediaFound') }));
+
+  box.replaceChildren();
+  let heading = '';
+  for (const { node, group } of rows) {
+    if (group !== heading) {
+      heading = group;
+      const title = document.createElement('h2');
+      title.textContent = group;
+      box.append(title);
+    }
+    box.append(node);
+  }
+  box.hidden = rows.length === 0;
+}
+
+function sourceRow(item) {
+  const node = document.createElement('div');
+  node.className = 'source';
+  if (item.unsupported) node.classList.add('off');
+
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = item.label ?? 'URL';
+
+  const who = document.createElement('div');
+  who.className = 'who';
+  const name = document.createElement('b');
+  name.textContent = item.name ?? item.url;
+  const sub = document.createElement('small');
+  sub.textContent = item.unsupported
+    ? t('popup.unsupported')
+    : item.bytes > 0
+      ? formatBytes(item.bytes)
+      : hostOf(item.url);
+  who.append(name, sub);
+  who.title = item.url;
+
+  const button = document.createElement('button');
+  button.className = 'primary';
+  button.textContent = t('popup.download');
+  button.disabled = Boolean(item.unsupported);
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    await send(MSG.DOWNLOAD_MEDIA, { url: item.url, name: item.name, kind: item.kind });
+  });
+
+  node.append(tag, who, button);
+  return { node, group: item.heading };
+}
+
+async function readClipboard() {
+  const stored = await send(MSG.GET_CLIPBOARD).then((r) => r?.clipboard ?? null);
+  try {
+    const text = (await navigator.clipboard.readText()).trim();
+    if (/^https?:\/\/\S+$/i.test(text)) {
+      return { url: text, name: nameOf(text), label: 'URL', kind: kindOf(text) };
+    }
+  } catch {
+    // No clipboard permission or no focus; the copy listener still provides one.
+  }
+  return stored ? { ...stored, name: nameOf(stored.url), label: 'URL', kind: kindOf(stored.url) } : null;
+}
+
+const kindOf = (url) => (/\.m3u8(\?|$)/i.test(url) ? 'hls' : 'file');
+
+function nameOf(url) {
+  try {
+    return decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || url);
+  } catch {
+    return url;
+  }
+}
+
+function hostOf(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
 }
 
 function send(type, payload) {

@@ -57,3 +57,23 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
   font-size: 11px; color: var(--dim); border-top: 1px solid var(--line);
 }
 .foot button { margin-left: auto; }
+
+.sources { border-bottom: 1px solid var(--line); background: var(--panel-2); }
+.sources h2 {
+  margin: 0; padding: 8px 14px 4px; font-size: 10px; font-weight: 600;
+  color: var(--dim); text-transform: uppercase; letter-spacing: .4px;
+}
+.source { display: flex; align-items: center; gap: 8px; padding: 7px 14px; }
+.source .tag {
+  font-size: 9px; font-weight: 700; letter-spacing: .3px; padding: 2px 5px;
+  border-radius: 5px; border: 1px solid var(--primary-line); color: var(--acc); flex: 0 0 auto;
+}
+.source .who { flex: 1; min-width: 0; }
+.source .who b { display: block; font-size: 12px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.source .who small { color: var(--dim); font-size: 10px; }
+.source button { flex: 0 0 auto; }
+.source.off { opacity: .55; }
+
+.paste { display: flex; gap: 6px; padding: 9px 14px; border-top: 1px solid var(--line); }
+.paste input { flex: 1; min-width: 0; font-size: 12px; }

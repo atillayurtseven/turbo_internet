@@ -80,5 +80,14 @@
   "options.general.captureModeDesc": "Rules decide which downloads this applies to.",
   "options.general.modeAsk": "Ask each time",
   "options.general.modeAlways": "Always take over",
-  "options.general.modeOff": "Never take over"
+  "options.general.modeOff": "Never take over",
+  "popup.mediaFound": "Media on this page",
+  "popup.clipboard": "Copied link",
+  "popup.pastePlaceholder": "Paste a URL to download",
+  "popup.download": "Download",
+  "popup.unsupported": "DASH is not supported",
+  "options.general.detectMedia": "Detect media on pages",
+  "options.general.detectMediaDesc": "Lists HLS streams and large video files found on the page. YouTube is excluded.",
+  "options.general.clipboardWatch": "Watch copied links",
+  "options.general.clipboardWatchDesc": "Only short http(s) URLs copied on a page are read; nothing else leaves the page."
 }

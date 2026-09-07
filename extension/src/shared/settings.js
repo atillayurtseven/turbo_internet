@@ -7,6 +7,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   version: 1,
   language: 'auto',
   captureMode: 'ask', // 'ask' | 'always' | 'off'
+  clipboardWatch: true,
+  detectMedia: true,
   promptSeconds: 20,
   probeRanges: true,
   fallbackSingleConnection: true,
@@ -99,6 +101,8 @@ export function normalizeSettings(raw) {
     version: d.version,
     language,
     captureMode: ['ask', 'always', 'off'].includes(raw?.captureMode) ? raw.captureMode : 'ask',
+    clipboardWatch: raw?.clipboardWatch !== false,
+    detectMedia: raw?.detectMedia !== false,
     promptSeconds: clampInt(raw?.promptSeconds, 5, 120, d.promptSeconds),
     probeRanges: raw?.probeRanges !== false,
     fallbackSingleConnection: raw?.fallbackSingleConnection !== false,

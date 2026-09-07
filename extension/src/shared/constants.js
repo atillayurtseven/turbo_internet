@@ -10,6 +10,11 @@ export const MSG = {
   RETRY: 'retry',
   REMOVE: 'remove',
   CLEAR_COMPLETED: 'clear-completed',
+  GET_MEDIA: 'get-media',
+  DOWNLOAD_MEDIA: 'download-media',
+  DOWNLOAD_URL: 'download-url',
+  CLIPBOARD_HIT: 'clipboard-hit',
+  GET_CLIPBOARD: 'get-clipboard',
   SHOW_FILE: 'show-file',
   SETTINGS_CHANGED: 'settings-changed',
 
@@ -24,6 +29,12 @@ export const MSG = {
 
   // service worker -> UI (broadcast)
   STATE_BROADCAST: 'state-broadcast',
+};
+
+/** What a task is: a plain HTTP file, or a stream stitched from a playlist. */
+export const KIND = {
+  FILE: 'file',
+  HLS: 'hls',
 };
 
 export const STATUS = {

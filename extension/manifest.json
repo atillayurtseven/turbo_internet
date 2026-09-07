@@ -10,7 +10,11 @@
     "unlimitedStorage",
     "offscreen",
     "contextMenus",
-    "scripting"
+    "scripting",
+    "webRequest",
+    "webNavigation",
+    "tabs",
+    "clipboardRead"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -46,5 +50,18 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content/clipboard.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
 }

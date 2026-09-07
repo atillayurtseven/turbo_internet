@@ -1,5 +1,6 @@
 import {
   KEEPALIVE_INTERVAL_MS,
+  KIND,
   MSG,
   PROGRESS_INTERVAL_MS,
   STATUS,
@@ -8,6 +9,7 @@ import {
 import { planSegments, segmentCount } from '../background/rules.js';
 import { sanitizeFilename } from '../shared/filetypes.js';
 import { probe } from './probe.js';
+import { loadPlaylist } from './hls.js';
 import {
   MAX_PART_BYTES,
   assemble,
@@ -26,6 +28,9 @@ export class Engine {
   #workers = new Map();
   #probes = new Map();
   #blobs = new Map();
+  // Playlist parts live here, never on the task: they hold CryptoKey objects
+  // that must not travel into persisted state.
+  #hlsParts = new Map();
   #settings = null;
   #pushTimer = 0;
   #keepaliveTimer = 0;
@@ -132,10 +137,17 @@ export class Engine {
   }
 
   async #start(task) {
-    const hasPlan = Array.isArray(task.segments) && task.segments.length > 0;
-    if (!hasPlan) {
-      await this.#probeTask(task);
-      if (task.status !== STATUS.PROBING) return; // paused or canceled mid-probe
+    if (task.kind === KIND.HLS) {
+      // The parsed playlist is lost whenever the offscreen document restarts,
+      // so it is re-read rather than trusted from persisted state.
+      if (!this.#hlsParts.has(task.id)) await this.#prepareHls(task);
+      if (task.status !== STATUS.PROBING) return;
+    } else {
+      const hasPlan = Array.isArray(task.segments) && task.segments.length > 0;
+      if (!hasPlan) {
+        await this.#probeTask(task);
+        if (task.status !== STATUS.PROBING) return; // paused or canceled mid-probe
+      }
     }
     this.#setStatus(task, STATUS.DOWNLOADING);
     this.#spawn(task);
@@ -189,7 +201,60 @@ export class Engine {
     }
   }
 
+  /** Reads the playlist and turns it into the task's segment plan. */
+  async #prepareHls(task) {
+    this.#setStatus(task, STATUS.PROBING);
+    const controller = new AbortController();
+    this.#probes.set(task.id, controller);
+
+    try {
+      const playlist = await loadPlaylist(task.url, {
+        referrer: task.referrer,
+        signal: controller.signal,
+      });
+
+      const parts = [];
+      if (playlist.init) {
+        parts.push({ index: 0, url: playlist.init.url, byteRange: playlist.init.byteRange, key: null, iv: null });
+      }
+      for (const part of playlist.parts) {
+        parts.push({
+          index: parts.length,
+          url: part.url,
+          byteRange: part.byteRange,
+          key: part.key,
+          iv: part.iv,
+        });
+      }
+
+      this.#hlsParts.set(task.id, parts);
+      task.segments = parts.map((part) => ({
+        index: part.index,
+        start: part.index,
+        end: part.index,
+        received: 0,
+      }));
+      task.connections = Math.max(1, Math.min(task.connections, 8));
+      task.container = playlist.container;
+      task.mime = playlist.container === 'mp4' ? 'video/mp4' : 'video/mp2t';
+      task.filename = withExtension(task.filename, playlist.container);
+      task.totalBytes = 0;
+
+      console.info('[dlman/engine] playlist', task.filename, {
+        segments: parts.length,
+        container: playlist.container,
+        encrypted: playlist.encrypted,
+      });
+    } finally {
+      this.#probes.delete(task.id);
+    }
+  }
+
   #spawn(task) {
+    if (task.kind === KIND.HLS) {
+      this.#spawnHls(task);
+      return;
+    }
     console.info('[dlman/engine] spawning worker', task.filename, `${task.segments.length} segments`);
     const worker = new Worker(new URL('./segment-worker.js', import.meta.url), { type: 'module' });
     this.#workers.set(task.id, worker);
@@ -214,6 +279,44 @@ export class Engine {
         backoffMs: this.#settings.retryBackoffMs,
         // The global cap is shared between the downloads running right now.
         speedLimit: this.#perTaskSpeedLimit(),
+      },
+    });
+
+    task.startedAt = Date.now();
+    task.lastSample = { bytes: task.receivedBytes, at: Date.now() };
+  }
+
+  #spawnHls(task) {
+    const parts = this.#hlsParts.get(task.id) ?? [];
+    console.info('[dlman/engine] spawning hls worker', task.filename, `${parts.length} segments`);
+    const worker = new Worker(new URL('./hls-worker.js', import.meta.url), { type: 'module' });
+    this.#workers.set(task.id, worker);
+
+    worker.onmessage = (event) => this.#onWorkerMessage(task.id, event.data);
+    worker.onerror = (event) => {
+      console.error('[dlman/engine] hls worker failed to load', event.message);
+      this.#fail(this.#tasks.get(task.id), new Error(event.message || 'worker-error'));
+      this.#terminate(task.id);
+    };
+
+    worker.postMessage({
+      type: 'start',
+      payload: {
+        id: task.id,
+        referrer: task.referrer,
+        connections: task.connections,
+        retries: this.#settings.segmentRetries,
+        backoffMs: this.#settings.retryBackoffMs,
+        segments: parts.map((part) => ({
+          index: part.index,
+          start: part.index,
+          end: part.index,
+          received: 0,
+          url: part.url,
+          byteRange: part.byteRange,
+          key: part.key,
+          iv: part.iv,
+        })),
       },
     });
 
@@ -283,6 +386,8 @@ export class Engine {
     if (task.totalBytes > 0 && blob.size !== task.totalBytes) {
       throw new Error(`size mismatch: got ${blob.size}, expected ${task.totalBytes}`);
     }
+    // A stream's size is only known once every segment is in.
+    if (task.totalBytes === 0) task.totalBytes = blob.size;
 
     // The Blob references the part files on disk; it is not read into memory.
     const blobUrl = URL.createObjectURL(blob);
@@ -308,6 +413,7 @@ export class Engine {
       task.status = STATUS.COMPLETED;
       this.#pushNow();
       this.#tasks.delete(task.id);
+      this.#hlsParts.delete(task.id);
     } else {
       throw new Error(response?.error || 'delivery-failed');
     }
@@ -378,4 +484,10 @@ export class Engine {
       pruneOrphans([...this.#tasks.keys()]).catch(() => {});
     }
   }
+}
+
+/** Gives a stream's filename the extension its container actually needs. */
+function withExtension(filename, container) {
+  const base = String(filename || 'video').replace(/\.(m3u8|mpd|ts|mp4)$/i, '');
+  return `${base}.${container === 'mp4' ? 'mp4' : 'ts'}`;
 }

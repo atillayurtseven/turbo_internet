@@ -80,5 +80,14 @@
   "options.general.captureModeDesc": "Hangi indirmelerin kapsandığına kurallar karar verir.",
   "options.general.modeAsk": "Her seferinde sor",
   "options.general.modeAlways": "Her zaman devral",
-  "options.general.modeOff": "Asla devralma"
+  "options.general.modeOff": "Asla devralma",
+  "popup.mediaFound": "Bu sayfadaki medya",
+  "popup.clipboard": "Kopyalanan bağlantı",
+  "popup.pastePlaceholder": "İndirmek için bir URL yapıştır",
+  "popup.download": "İndir",
+  "popup.unsupported": "DASH desteklenmiyor",
+  "options.general.detectMedia": "Sayfalardaki medyayı algıla",
+  "options.general.detectMediaDesc": "Sayfada bulunan HLS akışlarını ve büyük video dosyalarını listeler. YouTube kapsam dışıdır.",
+  "options.general.clipboardWatch": "Kopyalanan bağlantıları izle",
+  "options.general.clipboardWatchDesc": "Yalnızca sayfada kopyalanan kısa http(s) adresleri okunur; başka hiçbir şey sayfadan çıkmaz."
 }

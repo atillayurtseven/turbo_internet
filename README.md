@@ -73,6 +73,23 @@ Work stealing ayrıca Range destekli yerel bir test sunucusuyla doğrulandı: do
 çeyreği kasıtlı yavaşlatıldı, 3 bölme tetiklendi (seg3→seg4, seg3→seg5, seg4→seg6) ve
 40 MB'lık sonucun SHA-256'sı referansla birebir eşleşti.
 
+## Medya algılama ve HLS
+Sayfadan geçen istekler izlenir; bulunan HLS akışları ve büyük video dosyaları popup'ta
+listelenir. **YouTube kapsam dışıdır** — hem kullanım şartlarına aykırı hem de Chrome Web
+Store politikaları bunu yapan eklentileri yasaklıyor. DASH (`.mpd`) tespit edilir ama
+indirilmez: ses ve görüntü ayrı akışlar, mux etmek gerekir.
+
+HLS tarafı: master playlist'ten en yüksek bant genişlikli varyant seçilir, segmentler
+paralel indirilir, sırayla birleştirilir. Desteklenenler: TS ve fMP4 segmentler,
+`EXT-X-MAP` init segmenti, `EXT-X-BYTERANGE`, ve AES-128 (bu DRM değil; anahtar her
+istemciye açık sunulur). `SAMPLE-AES` ve Widevine reddedilir. Çıktı `.ts` veya `.mp4`
+olur — TS'i MP4'e çevirmek remux ister, o yapılmıyor.
+
+## Pano
+Chrome'da arka planda panoyu dinleyen bir API **yok**. Üç yol birlikte kullanılır:
+sayfalardaki kopyalama olayını dinleyen içerik betiği (yalnızca kısa http(s) adresleri
+gönderir), popup açıldığında panoyu okuma, ve elle URL yapıştırma alanı.
+
 ## Ayarlar
 Değişiklikler anında kaydedilir; Kaydet düğmesi yok. Kural tablosundaki **min. boyut**
 sütununa dikkat: varsayılan olarak kurulum dosyaları 5 MB, arşivler 20 MB, ISO'lar
