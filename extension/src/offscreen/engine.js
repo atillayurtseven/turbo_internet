@@ -629,10 +629,9 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function assertPlayable(task, blob) {
   if (!/\.(mp4|m4v|mov)$/i.test(task.filename)) return;
   const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
-  if (head.byteLength < 8) throw new Error('file is too short to be a video');
+  // Stable codes, not sentences: the popup turns these into the user's language.
+  if (head.byteLength < 8) throw new Error('too-short');
 
   const type = String.fromCharCode(head[4], head[5], head[6], head[7]);
-  if (type === 'moof' || type === 'styp') {
-    throw new Error('this is one fragment of a stream, not a complete video');
-  }
+  if (type === 'moof' || type === 'styp') throw new Error('stream-fragment');
 }

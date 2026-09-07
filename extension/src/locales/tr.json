@@ -65,7 +65,7 @@
   "unit.times": "kez",
   "error.network": "Ağ hatası",
   "error.httpStatus": "Sunucu HTTP {status} döndü",
-  "error.sizeMismatch": "Sunucu farklı bir dosya boyutu bildirdi",
+  "error.sizeMismatch": "Sunucu söz verdiğinden farklı miktarda veri gönderdi",
   "error.storage": "Yerel depolamaya yazılamadı",
   "error.aborted": "İndirme durduruldu",
   "error.retriesExhausted": "{index}. parça {n} denemeden sonra başarısız oldu",
@@ -100,5 +100,9 @@
   "options.general.askMedia": "Sayfada bulunan videoları sor",
   "options.general.askMediaDesc": "Bir akış görüldüğünde aynı kartı gösterir. Kapalıyken yalnızca popup'ta listelenir.",
   "popup.clearMedia": "Listeyi temizle",
-  "popup.dismiss": "Kaldır"
+  "popup.dismiss": "Kaldır",
+  "error.streamFragment": "Bu bir akışın parçası, tam bir video değil",
+  "error.tooShort": "Dosya bir video olamayacak kadar kısa",
+  "error.rangeUnsupported": "Sunucu çoklu bağlantıya izin vermiyor",
+  "error.engineUnreachable": "İndirme motoruna ulaşılamadı"
 }

@@ -65,7 +65,7 @@
   "unit.times": "times",
   "error.network": "Network error",
   "error.httpStatus": "Server returned HTTP {status}",
-  "error.sizeMismatch": "The server reported a different file size",
+  "error.sizeMismatch": "The server sent a different amount of data than it promised",
   "error.storage": "Could not write to local storage",
   "error.aborted": "Download aborted",
   "error.retriesExhausted": "Segment {index} failed after {n} attempts",
@@ -100,5 +100,9 @@
   "options.general.askMedia": "Ask about videos found on pages",
   "options.general.askMediaDesc": "Shows the same card when a stream is spotted. Off means they are only listed in the popup.",
   "popup.clearMedia": "Clear list",
-  "popup.dismiss": "Dismiss"
+  "popup.dismiss": "Dismiss",
+  "error.streamFragment": "This is one piece of a stream, not a whole video",
+  "error.tooShort": "The file is too short to be a video",
+  "error.rangeUnsupported": "The server does not allow multiple connections",
+  "error.engineUnreachable": "The download engine could not be reached"
 }

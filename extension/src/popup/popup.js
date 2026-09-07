@@ -307,7 +307,7 @@ function infoParts(task) {
     add(t('popup.noRangeSupport'), 'warn');
   }
 
-  if (task.status === STATUS.ERROR && task.error) add(task.error, 'err');
+  if (task.status === STATUS.ERROR && task.error) add(describeError(task.error), 'err');
 
   return parts;
 }
@@ -317,6 +317,23 @@ function infoParts(task) {
 const MAX_CELLS = 16;
 
 const barCache = new Map();
+
+/** Engine errors arrive as stable codes; anything else is shown as it came. */
+const ERROR_TEXT = new Map([
+  ['stream-fragment', 'error.streamFragment'],
+  ['too-short', 'error.tooShort'],
+  ['range-unsupported', 'error.rangeUnsupported'],
+]);
+
+function describeError(error) {
+  const text = String(error);
+  for (const [code, key] of ERROR_TEXT) {
+    if (text.includes(code)) return t(key);
+  }
+  if (text.startsWith('size mismatch')) return t('error.sizeMismatch');
+  if (text.startsWith('engine unreachable')) return t('error.engineUnreachable');
+  return text;
+}
 
 function barSegments(task) {
   // Memoised: an HLS task carries thousands of segments and this ran for every

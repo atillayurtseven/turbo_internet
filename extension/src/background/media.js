@@ -36,7 +36,16 @@ export function registerMediaSniffer(onChange) {
   chrome.webRequest.onHeadersReceived.addListener(
     (details) => {
       const item = classify(details);
-      if (item) remember(details.tabId, item, onChange);
+      if (!item) return;
+      if (item.kind !== 'file') {
+        remember(details.tabId, item, onChange);
+        return;
+      }
+      // Progressive candidates are verified first: a fragment must never be
+      // offered as if it were the whole video.
+      looksComplete(item.url).then((complete) => {
+        if (complete) remember(details.tabId, item, onChange);
+      });
     },
     { urls: ['http://*/*', 'https://*/*'], types: ['media', 'xmlhttprequest', 'other', 'object'] },
     ['responseHeaders'],
@@ -99,6 +108,32 @@ function classify(details) {
     return { url, kind: 'file', label: type.split('/')[1].toUpperCase(), name: nameFor(url, 'video'), bytes: length };
   }
   return null;
+}
+
+/**
+ * Reads the first bytes of a candidate before offering it.
+ *
+ * URL shape is not a reliable tell: a stream segment can be large, have no
+ * extension and a token for a name. A real file opens with an `ftyp` box, a
+ * fragment with `moof` or `styp`, so the file itself is asked instead.
+ */
+async function looksComplete(url) {
+  try {
+    const response = await fetch(url, {
+      headers: { Range: 'bytes=0-15' },
+      credentials: 'omit',
+      cache: 'no-store',
+    });
+    if (!response.ok && response.status !== 206) return false;
+    const head = new Uint8Array((await response.arrayBuffer()).slice(0, 16));
+    if (head.byteLength < 8) return false;
+    const type = String.fromCharCode(head[4], head[5], head[6], head[7]);
+    // Anything that is not an MP4 family box is left alone; only fragments are
+    // rejected, so WebM and friends still pass.
+    return type !== 'moof' && type !== 'styp';
+  } catch {
+    return false;
+  }
 }
 
 function remember(tabId, item, onChange) {
