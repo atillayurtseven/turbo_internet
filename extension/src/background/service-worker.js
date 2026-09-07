@@ -50,7 +50,14 @@ registerInterceptor({
   },
   // Synchronous peek, so the common case can decline without calling suggest().
   getCachedSettings: () => settings,
-  resolveOwn: (url) => deliveries.get(url),
+  // Falls back to persisted state: the in-memory map is empty after a restart,
+  // and the delivered file would then be saved under Chrome's default name.
+  resolveOwn: (url) => {
+    const cached = deliveries.get(url);
+    if (cached) return cached;
+    const task = state.getTasks().find((item) => item.deliveryUrl === url);
+    return task ? joinPath(task.subfolder, sanitizeFilename(task.filename)) : undefined;
+  },
   // Matched on both: a redirect means the task ends up knowing a different URL
   // than the one the question was asked about.
   isHandled: (url) => state.getTasks().some((task) => sameSource(task, url)),
@@ -228,6 +235,7 @@ function fallbackRule() {
 
 chrome.runtime.onStartup.addListener(async () => {
   await ready;
+  await sweepDeliveries().catch(() => {});
   await state.markInterrupted();
   await installContextMenu();
   broadcast();
@@ -235,6 +243,7 @@ chrome.runtime.onStartup.addListener(async () => {
 
 chrome.runtime.onInstalled.addListener(async () => {
   await ready;
+  await sweepDeliveries().catch(() => {});
   await state.markInterrupted();
   await installContextMenu();
 });
@@ -375,8 +384,15 @@ async function handleMessage(message, sender) {
 /** Blob URL -> relative path, read back by the interceptor for our own downloads. */
 const deliveries = new Map();
 
-/** Chrome download id -> the task it is writing, while the write is in flight. */
-const pending = new Map();
+/**
+ * Which task a Chrome download is writing is kept on the task itself, not in a
+ * Map here: the service worker is torn down routinely, and an in-memory record
+ * meant the completion event arrived with nothing to match it against -- the
+ * download finished but the row sat on "finalising" for good.
+ */
+function taskForDownload(downloadId) {
+  return state.getTasks().find((task) => task.chromeDownloadId === downloadId);
+}
 
 /**
  * Hands the finished file to Chrome and answers immediately.
@@ -400,10 +416,11 @@ async function deliver({ id, blobUrl, filename, subfolder }) {
       conflictAction: 'uniquify',
       saveAs: false,
     });
-    pending.set(downloadId, { taskId: id, blobUrl });
+    // Recorded before anything can complete, and in storage so it survives.
+    await state.upsert({ id, status: STATUS.ASSEMBLING, chromeDownloadId: downloadId, deliveryUrl: blobUrl });
     // Chrome may already have finished a disk-backed blob by now.
     const [item] = await chrome.downloads.search({ id: downloadId });
-    if (item) settle(downloadId, item.state, item.error);
+    if (item) await settle(downloadId, item.state, item.error);
     return { ok: true, downloadId };
   } catch (error) {
     deliveries.delete(blobUrl);
@@ -414,30 +431,56 @@ async function deliver({ id, blobUrl, filename, subfolder }) {
 }
 
 chrome.downloads.onChanged.addListener((delta) => {
-  if (!pending.has(delta.id) || !delta.state) return;
-  settle(delta.id, delta.state.current, delta.error?.current);
+  if (!delta.state) return;
+  settle(delta.id, delta.state.current, delta.error?.current).catch((error) =>
+    console.error('[dlman] settle failed', error),
+  );
 });
 
 async function settle(downloadId, downloadState, error) {
-  const entry = pending.get(downloadId);
-  if (!entry || (downloadState !== 'complete' && downloadState !== 'interrupted')) return;
-  pending.delete(downloadId);
-  deliveries.delete(entry.blobUrl);
-
+  if (downloadState !== 'complete' && downloadState !== 'interrupted') return;
   await ready;
+
+  const task = taskForDownload(downloadId);
+  if (!task || TERMINAL_STATUSES.has(task.status)) return;
+
+  deliveries.delete(task.deliveryUrl);
   if (downloadState === 'complete') {
     await state.upsert({
-      id: entry.taskId,
+      id: task.id,
       status: STATUS.COMPLETED,
-      chromeDownloadId: downloadId,
       completedAt: Date.now(),
+      deliveryUrl: '',
       speed: 0,
     });
   } else {
-    await state.upsert({ id: entry.taskId, status: STATUS.ERROR, error: error || 'interrupted' });
+    await state.upsert({
+      id: task.id,
+      status: STATUS.ERROR,
+      error: error || 'interrupted',
+      deliveryUrl: '',
+    });
   }
   broadcast();
-  await sendToOffscreen(MSG.RELEASE_BLOB, { id: entry.taskId, blobUrl: entry.blobUrl }).catch(() => {});
+  await sendToOffscreen(MSG.RELEASE_BLOB, { id: task.id, blobUrl: task.deliveryUrl }).catch(() => {});
+}
+
+/**
+ * Picks up deliveries whose completion event was missed while the service
+ * worker was asleep, including ones already stuck from an earlier session.
+ */
+async function sweepDeliveries() {
+  await ready;
+  for (const task of state.getTasks()) {
+    // Keyed on deliveryUrl, not status: it is set only at delivery, so it marks
+    // exactly the tasks Chrome is writing, whatever the status says.
+    if (!task.deliveryUrl || !task.chromeDownloadId) continue;
+    if (TERMINAL_STATUSES.has(task.status)) continue;
+    const [item] = await chrome.downloads.search({ id: task.chromeDownloadId });
+    if (item) await settle(task.chromeDownloadId, item.state, item.error);
+    else await state.upsert({ id: task.id, status: STATUS.ERROR, error: 'delivery-lost' });
+  }
+  broadcast();
 }
 
 function sameSource(task, url) {
@@ -491,6 +534,10 @@ function updateBadge() {
  * the offscreen document; the engine ignores ids it already knows.
  */
 ready.then(async () => {
+  // Deliveries first: a task whose write finished while the worker was asleep
+  // is only waiting to be noticed, not to be downloaded again.
+  await sweepDeliveries().catch((error) => console.error('[dlman] delivery sweep failed', error));
+
   const pending = state
     .getTasks()
     .filter((task) => task.status === STATUS.QUEUED || task.status === STATUS.DOWNLOADING);

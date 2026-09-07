@@ -122,6 +122,9 @@ export async function clearCompleted(all = false) {
 export async function markInterrupted() {
   let changed = false;
   for (const task of tasks) {
+    // A task already handed to Chrome is not interrupted, it is waiting to be
+    // noticed. Pausing it here hid a finished download behind a Resume button.
+    if (task.deliveryUrl) continue;
     if (!TERMINAL_STATUSES.has(task.status) && task.status !== STATUS.PAUSED) {
       task.status = STATUS.PAUSED;
       task.speed = 0;
