@@ -138,6 +138,7 @@ function renderGeneral() {
     switchRow('options.general.askMedia', 'options.general.askMediaDesc', 'askAboutMedia'),
     switchRow('options.general.clipboardWatch', 'options.general.clipboardWatchDesc', 'clipboardWatch'),
     switchRow('options.general.remux', 'options.general.remuxDesc', 'remuxToMp4'),
+    switchRow('options.general.checksum', 'options.general.checksumDesc', 'computeChecksum'),
     switchRow('options.general.probe', 'options.general.probeDesc', 'probeRanges'),
     switchRow('options.general.fallback', 'options.general.fallbackDesc', 'fallbackSingleConnection'),
     numberRow('options.general.maxConcurrent', 'options.general.maxConcurrentDesc',

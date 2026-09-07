@@ -45,6 +45,7 @@ export const STATUS = {
   DOWNLOADING: 'downloading',
   PAUSED: 'paused',
   REMUXING: 'remuxing',
+  HASHING: 'hashing',
   ASSEMBLING: 'assembling',
   COMPLETED: 'completed',
   ERROR: 'error',
@@ -55,6 +56,7 @@ export const ACTIVE_STATUSES = new Set([
   STATUS.PROBING,
   STATUS.DOWNLOADING,
   STATUS.REMUXING,
+  STATUS.HASHING,
   STATUS.ASSEMBLING,
 ]);
 

@@ -109,5 +109,12 @@
   "warning.awaitingConfirmation": "Chrome dosyayı onaylamanı bekliyor",
   "options.rules.connectionsHelp": "Paralel bağlantı sayısı. Büyük dosyalarda daha fazlası kullanılabilir, çünkü her parçanın boyutu sınırlı.",
   "error.partMismatch": "Bazı parçalar yanlış boyutta geldi; dosya bozuk olurdu",
-  "error.fileChanged": "Dosya indirme sırasında sunucuda değişti; baştan başla"
+  "error.fileChanged": "Dosya indirme sırasında sunucuda değişti; baştan başla",
+  "status.hashing": "Sağlama hesaplanıyor…",
+  "popup.checksum": "SHA-256",
+  "popup.copied": "Kopyalandı",
+  "action.copyLink": "Bağlantıyı kopyala",
+  "action.redownload": "Yeniden indir",
+  "options.general.checksum": "İndirme bitince SHA-256 hesapla",
+  "options.general.checksumDesc": "Yayınlanan sağlama toplamıyla karşılaştırmanı sağlar. Büyük dosyalarda dosyayı yeniden okumak zaman alır."
 }

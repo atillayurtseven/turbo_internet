@@ -311,6 +311,19 @@ function infoParts(task) {
     add(t('popup.noRangeSupport'), 'warn');
   }
 
+  if (task.sha256) {
+    const sum = document.createElement('span');
+    sum.className = 'sha';
+    sum.textContent = `${t('popup.checksum')} ${task.sha256.slice(0, 12)}…`;
+    sum.title = task.sha256;
+    sum.addEventListener('click', () => {
+      navigator.clipboard.writeText(task.sha256).then(
+        () => flash(sum, t('popup.copied')),
+        () => {},
+      );
+    });
+    parts.push(sum);
+  }
   if (task.warning === 'awaiting-confirmation') add(t('warning.awaitingConfirmation'), 'warn');
   if (task.status === STATUS.ERROR && task.error) add(describeError(task.error), 'err');
 
@@ -413,6 +426,8 @@ function actions(task) {
   if (TERMINAL_STATUSES.has(task.status)) {
     if (task.status === STATUS.ERROR) add('action.retry', MSG.RETRY, true);
     if (task.status === STATUS.COMPLETED) add('action.showFile', MSG.SHOW_FILE, true);
+    addCopyLink(buttons, task);
+    addRedownload(buttons, task);
   } else {
     if (task.status === STATUS.PAUSED) add('action.resume', MSG.RESUME, true);
     else if (PAUSABLE.has(task.status)) add('action.pause', MSG.PAUSE, true);
@@ -421,6 +436,39 @@ function actions(task) {
 
   add('action.remove', MSG.REMOVE);
   return buttons;
+}
+
+function addCopyLink(buttons, task) {
+  const button = document.createElement('button');
+  button.textContent = t('action.copyLink');
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(task.url);
+      flash(button, t('popup.copied'));
+    } catch {
+      // No clipboard access; leaving the label alone says enough.
+    }
+  });
+  buttons.push(button);
+}
+
+function addRedownload(buttons, task) {
+  const button = document.createElement('button');
+  button.textContent = t('action.redownload');
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    await send(MSG.DOWNLOAD_URL, { url: task.url, name: task.filename, kind: task.kind });
+  });
+  buttons.push(button);
+}
+
+/** Briefly swaps a button's label to confirm what just happened. */
+function flash(button, text) {
+  const original = button.textContent;
+  button.textContent = text;
+  setTimeout(() => {
+    button.textContent = original;
+  }, 1200);
 }
 
 /** Assembling hands the file to Chrome; there is nothing to hold there. */

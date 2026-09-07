@@ -86,3 +86,9 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
 
 .paste { display: flex; gap: 6px; padding: 9px 14px; border-top: 1px solid var(--line); }
 .paste input { flex: 1; min-width: 0; font-size: 12px; }
+
+.info .sha {
+  font-family: ui-monospace, Menlo, monospace; font-size: 10px;
+  color: var(--dim); cursor: pointer; text-decoration: underline dotted;
+}
+.info .sha:hover { color: var(--txt); }

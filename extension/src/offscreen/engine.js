@@ -338,6 +338,31 @@ export class Engine {
     }
   }
 
+  /** Hashes the finished parts so the file can be checked against a published sum. */
+  #hash(task, prefix) {
+    return new Promise((resolve) => {
+      const worker = new Worker(new URL('./hash-worker.js', import.meta.url), { type: 'module' });
+      this.#workers.set(task.id, worker);
+
+      const finish = (value) => {
+        this.#terminate(task.id);
+        resolve(value);
+      };
+      worker.onmessage = (event) => {
+        const message = event.data ?? {};
+        if (message.type === 'done') finish(message.sha256);
+        // A checksum is a convenience; failing to produce one must not lose the
+        // download, so the file is delivered without it.
+        else if (message.type === 'error') finish('');
+      };
+      worker.onerror = () => finish('');
+      worker.postMessage({
+        type: 'start',
+        payload: { prefix, segments: task.segments, totalBytes: task.totalBytes },
+      });
+    });
+  }
+
   /** Runs `attempt` until it succeeds, a retry is pointless, or budget runs out. */
   async #retry(attempt) {
     const tries = this.#settings.segmentRetries + 1;
@@ -516,6 +541,12 @@ export class Engine {
         console.error('[dlman/engine] part size mismatch', task.filename, problems);
         throw new Error(`part-mismatch: ${problems.slice(0, 4).join(' ')}`);
       }
+    }
+
+    if (this.#settings.computeChecksum) {
+      this.#setStatus(task, STATUS.HASHING);
+      task.sha256 = await this.#hash(task, prefix);
+      this.#push();
     }
 
     const blob = await assemble(prefix, task.segments, task.mime);

@@ -109,5 +109,12 @@
   "warning.awaitingConfirmation": "Chrome is waiting for you to allow this file",
   "options.rules.connectionsHelp": "Parallel connections. A large file may use more, because each part is capped in size.",
   "error.partMismatch": "Some pieces came out the wrong size; the file would be corrupt",
-  "error.fileChanged": "The file on the server changed while downloading; start again"
+  "error.fileChanged": "The file on the server changed while downloading; start again",
+  "status.hashing": "Checking…",
+  "popup.checksum": "SHA-256",
+  "popup.copied": "Copied",
+  "action.copyLink": "Copy link",
+  "action.redownload": "Download again",
+  "options.general.checksum": "Calculate SHA-256 after downloading",
+  "options.general.checksumDesc": "Lets you compare against a published checksum. Reading the file back takes a while on large downloads."
 }
