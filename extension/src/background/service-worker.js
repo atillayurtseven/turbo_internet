@@ -121,6 +121,8 @@ try {
 
 /** Last http(s) URL seen on a copy event, offered as a suggestion in the popup. */
 let clipboard = null;
+/** Suggestions the user waved away; the OS clipboard still holds them. */
+const ignoredClipboard = new Set();
 
 /** Streams already offered, so a page that re-requests one is not nagged. */
 const offered = new Set();
@@ -298,14 +300,27 @@ async function handleMessage(message, sender) {
       return { ok: true };
 
     case MSG.CLIPBOARD_HIT:
-      if (settings.clipboardWatch && payload?.url) {
+      if (settings.clipboardWatch && payload?.url && !ignoredClipboard.has(payload.url)) {
         clipboard = { url: payload.url, at: Date.now() };
         broadcast();
       }
       return { ok: true };
 
     case MSG.GET_CLIPBOARD:
-      return { ok: true, clipboard };
+      return { ok: true, clipboard, ignored: [...ignoredClipboard] };
+
+    case MSG.CLEAR_CLIPBOARD:
+      // Remembered, not just cleared: the URL is still on the system clipboard
+      // and would come straight back the next time the popup opened.
+      if (payload?.url) {
+        ignoredClipboard.add(payload.url);
+        while (ignoredClipboard.size > 50) {
+          ignoredClipboard.delete(ignoredClipboard.values().next().value);
+        }
+      }
+      clipboard = null;
+      broadcast();
+      return { ok: true };
 
     case MSG.GET_MEDIA: {
       const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -360,81 +375,69 @@ async function handleMessage(message, sender) {
 /** Blob URL -> relative path, read back by the interceptor for our own downloads. */
 const deliveries = new Map();
 
+/** Chrome download id -> the task it is writing, while the write is in flight. */
+const pending = new Map();
+
+/**
+ * Hands the finished file to Chrome and answers immediately.
+ *
+ * Waiting for the write to finish inside the message handler kept the channel
+ * open for as long as the write took; when the service worker was torn down in
+ * the meantime the engine got "message channel closed" and the task died with
+ * the file already fully downloaded. Completion is tracked by the listener
+ * below instead.
+ */
 async function deliver({ id, blobUrl, filename, subfolder }) {
-  // Guards a privileged call: without them a crafted message could have this
-  // silently save any URL under a name of its choosing.
   if (!String(blobUrl).startsWith('blob:')) return { ok: false, error: 'not-a-blob' };
   if (!state.getTasks().some((task) => task.id === id)) return { ok: false, error: 'unknown-task' };
 
   const path = joinPath(subfolder, sanitizeFilename(filename));
   deliveries.set(blobUrl, path);
   try {
-    // Armed before the download starts: a blob backed by local files can finish
-    // before download() even resolves, and the completion event was then missed,
-    // leaving the task stuck in "assembling" with the blob never released.
-    const finished = new Deferred();
     const downloadId = await chrome.downloads.download({
       url: blobUrl,
       filename: path,
       conflictAction: 'uniquify',
       saveAs: false,
     });
-    await waitForDownload(downloadId, finished);
+    pending.set(downloadId, { taskId: id, blobUrl });
+    // Chrome may already have finished a disk-backed blob by now.
+    const [item] = await chrome.downloads.search({ id: downloadId });
+    if (item) settle(downloadId, item.state, item.error);
+    return { ok: true, downloadId };
+  } catch (error) {
+    deliveries.delete(blobUrl);
+    await state.upsert({ id, status: STATUS.ERROR, error: String(error?.message || error) });
+    broadcast();
+    return { ok: false, error: String(error?.message || error) };
+  }
+}
+
+chrome.downloads.onChanged.addListener((delta) => {
+  if (!pending.has(delta.id) || !delta.state) return;
+  settle(delta.id, delta.state.current, delta.error?.current);
+});
+
+async function settle(downloadId, downloadState, error) {
+  const entry = pending.get(downloadId);
+  if (!entry || (downloadState !== 'complete' && downloadState !== 'interrupted')) return;
+  pending.delete(downloadId);
+  deliveries.delete(entry.blobUrl);
+
+  await ready;
+  if (downloadState === 'complete') {
     await state.upsert({
-      id,
+      id: entry.taskId,
       status: STATUS.COMPLETED,
       chromeDownloadId: downloadId,
       completedAt: Date.now(),
       speed: 0,
     });
-    broadcast();
-    return { ok: true, downloadId };
-  } catch (error) {
-    await state.upsert({ id, status: STATUS.ERROR, error: String(error?.message || error) });
-    broadcast();
-    return { ok: false, error: String(error?.message || error) };
-  } finally {
-    deliveries.delete(blobUrl);
-    await sendToOffscreen(MSG.RELEASE_BLOB, { id, blobUrl }).catch(() => {});
+  } else {
+    await state.upsert({ id: entry.taskId, status: STATUS.ERROR, error: error || 'interrupted' });
   }
-}
-
-class Deferred {
-  constructor() {
-    this.promise = new Promise((resolve, reject) => {
-      this.resolve = resolve;
-      this.reject = reject;
-    });
-  }
-}
-
-const DELIVERY_TIMEOUT_MS = 5 * 60 * 1000;
-
-/**
- * Resolves when Chrome has written the file. The event can arrive before this
- * is called, so the current state is polled once as well, and a timeout keeps
- * the listener from outliving a download that never reports either outcome.
- */
-async function waitForDownload(downloadId, deferred) {
-  const listener = (delta) => {
-    if (delta.id !== downloadId) return;
-    if (delta.state?.current === 'complete') deferred.resolve();
-    else if (delta.state?.current === 'interrupted') {
-      deferred.reject(new Error(delta.error?.current || 'interrupted'));
-    }
-  };
-  chrome.downloads.onChanged.addListener(listener);
-
-  const timer = setTimeout(() => deferred.reject(new Error('delivery timed out')), DELIVERY_TIMEOUT_MS);
-  try {
-    const [item] = await chrome.downloads.search({ id: downloadId });
-    if (item?.state === 'complete') deferred.resolve();
-    else if (item?.state === 'interrupted') deferred.reject(new Error(item.error || 'interrupted'));
-    await deferred.promise;
-  } finally {
-    clearTimeout(timer);
-    chrome.downloads.onChanged.removeListener(listener);
-  }
+  broadcast();
+  await sendToOffscreen(MSG.RELEASE_BLOB, { id: entry.taskId, blobUrl: entry.blobUrl }).catch(() => {});
 }
 
 function sameSource(task, url) {

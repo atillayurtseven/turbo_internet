@@ -99,5 +99,6 @@
   "prompt.dismiss": "{n} sn sonra kapanır",
   "options.general.askMedia": "Sayfada bulunan videoları sor",
   "options.general.askMediaDesc": "Bir akış görüldüğünde aynı kartı gösterir. Kapalıyken yalnızca popup'ta listelenir.",
-  "popup.clearMedia": "Listeyi temizle"
+  "popup.clearMedia": "Listeyi temizle",
+  "popup.dismiss": "Kaldır"
 }

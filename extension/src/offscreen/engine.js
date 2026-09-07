@@ -122,7 +122,11 @@ export class Engine {
   releaseBlob(id, blobUrl) {
     URL.revokeObjectURL(blobUrl ?? this.#blobs.get(id));
     this.#blobs.delete(id);
+    // Safe now: Chrome has finished reading the parts through the blob.
+    this.#tasks.delete(id);
+    this.#hlsParts.delete(id);
     deleteParts(id).catch((error) => console.warn('[dlman/engine] cleanup failed', error));
+    this.#pump();
   }
 
   // ---- internals -----------------------------------------------------------
@@ -525,15 +529,13 @@ export class Engine {
     }
 
     if (response?.ok) {
-      task.completedAt = Date.now();
+      // Handed off: the file is Chrome's to write now, and the service worker
+      // flips the task to completed (or failed) when the write actually ends.
+      // The task stays here until then -- the blob is backed by the OPFS parts,
+      // and dropping it early let the orphan sweep delete them mid-write.
       task.speed = 0;
-      // Carried back so the snapshot below does not wipe it; "show in folder"
-      // needs this id.
       task.chromeDownloadId = response.downloadId ?? 0;
-      task.status = STATUS.COMPLETED;
       this.#pushNow();
-      this.#tasks.delete(task.id);
-      this.#hlsParts.delete(task.id);
     } else {
       throw new Error(response?.error || 'delivery-failed');
     }

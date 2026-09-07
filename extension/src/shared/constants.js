@@ -16,6 +16,7 @@ export const MSG = {
   DOWNLOAD_URL: 'download-url',
   CLIPBOARD_HIT: 'clipboard-hit',
   GET_CLIPBOARD: 'get-clipboard',
+  CLEAR_CLIPBOARD: 'clear-clipboard',
   SHOW_FILE: 'show-file',
   SETTINGS_CHANGED: 'settings-changed',
 

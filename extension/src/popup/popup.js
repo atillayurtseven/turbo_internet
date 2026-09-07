@@ -123,6 +123,19 @@ function sourceRow(item) {
   });
 
   node.append(tag, who, button);
+
+  // A copied link needs a way out: it is a one-off suggestion, not a list.
+  if (item.clipboard) {
+    const dismiss = document.createElement('button');
+    dismiss.textContent = t('popup.dismiss');
+    dismiss.addEventListener('click', async () => {
+      const box = document.getElementById('sources');
+      box.dataset.key = '';
+      await send(MSG.CLEAR_CLIPBOARD, { url: item.url });
+      renderSources();
+    });
+    node.append(dismiss);
+  }
   return { node, group: item.heading };
 }
 
@@ -131,16 +144,27 @@ async function readClipboard() {
   // looking at whatever the user last copied, which may be a password.
   if (settings && settings.clipboardWatch === false) return null;
 
-  const stored = await send(MSG.GET_CLIPBOARD).then((r) => r?.clipboard ?? null);
+  const answer = await send(MSG.GET_CLIPBOARD);
+  const ignored = new Set(answer?.ignored ?? []);
+  const stored = answer?.clipboard ?? null;
+
   try {
     const text = (await navigator.clipboard.readText()).trim();
-    if (/^https?:\/\/\S+$/i.test(text)) {
-      return { url: text, name: nameOf(text), label: 'URL', kind: kindOf(text) };
+    if (/^https?:\/\/\S+$/i.test(text) && !ignored.has(text)) {
+      return { url: text, name: nameOf(text), label: 'URL', kind: kindOf(text), clipboard: true };
     }
   } catch {
     // No clipboard permission or no focus; the copy listener still provides one.
   }
-  return stored ? { ...stored, name: nameOf(stored.url), label: 'URL', kind: kindOf(stored.url) } : null;
+
+  if (!stored || ignored.has(stored.url)) return null;
+  return {
+    ...stored,
+    name: nameOf(stored.url),
+    label: 'URL',
+    kind: kindOf(stored.url),
+    clipboard: true,
+  };
 }
 
 const kindOf = (url) => (/\.m3u8(\?|$)/i.test(url) ? 'hls' : 'file');
@@ -358,34 +382,29 @@ function actions(task) {
     buttons.push(button);
   };
 
-  switch (task.status) {
-    case STATUS.QUEUED:
-    case STATUS.PROBING:
-    case STATUS.DOWNLOADING:
-      add('action.pause', MSG.PAUSE, true);
-      add('action.cancel', MSG.CANCEL);
-      break;
-    case STATUS.PAUSED:
-      add('action.resume', MSG.RESUME, true);
-      add('action.cancel', MSG.CANCEL);
-      break;
-    case STATUS.ERROR:
-      add('action.retry', MSG.RETRY, true);
-      add('action.remove', MSG.REMOVE);
-      break;
-    case STATUS.COMPLETED:
-      add('action.showFile', MSG.SHOW_FILE, true);
-      add('action.remove', MSG.REMOVE);
-      break;
-    default:
-      break;
+  // Every row can be stopped and every row can be dismissed, whatever state it
+  // is in: states like "finalising" used to offer nothing but Remove, which
+  // left a stuck download with no way to cancel it.
+  if (TERMINAL_STATUSES.has(task.status)) {
+    if (task.status === STATUS.ERROR) add('action.retry', MSG.RETRY, true);
+    if (task.status === STATUS.COMPLETED) add('action.showFile', MSG.SHOW_FILE, true);
+  } else {
+    if (task.status === STATUS.PAUSED) add('action.resume', MSG.RESUME, true);
+    else if (PAUSABLE.has(task.status)) add('action.pause', MSG.PAUSE, true);
+    add('action.cancel', MSG.CANCEL);
   }
-  // Always available: a wedged task must never be impossible to get rid of.
-  if (!buttons.some((button) => button.dataset.action === MSG.REMOVE)) {
-    add('action.remove', MSG.REMOVE);
-  }
+
+  add('action.remove', MSG.REMOVE);
   return buttons;
 }
+
+/** Assembling hands the file to Chrome; there is nothing to hold there. */
+const PAUSABLE = new Set([
+  STATUS.QUEUED,
+  STATUS.PROBING,
+  STATUS.DOWNLOADING,
+  STATUS.REMUXING,
+]);
 
 function renderSummary() {
   const active = tasks.filter((task) => task.status === STATUS.DOWNLOADING);
