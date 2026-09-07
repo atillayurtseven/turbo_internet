@@ -93,7 +93,15 @@ async function candidateTabs() {
  */
 function overlay(s) {
   return new Promise((resolve) => {
+    // Second line of defence against stacked cards: the service worker's
+    // per-tab guard is lost when it restarts, but the page still knows.
+    if (document.querySelector('[data-dlman-card]')) {
+      resolve(null);
+      return;
+    }
+
     const host = document.createElement('div');
+    host.setAttribute('data-dlman-card', '');
     // `all` must come first: as the last declaration it would reset the
     // positioning above it and drop the card to the bottom of the document.
     host.style.cssText =

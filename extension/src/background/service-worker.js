@@ -115,6 +115,15 @@ let clipboard = null;
 
 /** Streams already offered, so a page that re-requests one is not nagged. */
 const offered = new Set();
+/** Tabs that already carry a card, or already got their one media offer. */
+const prompting = new Set();
+const offeredTabs = new Set();
+
+chrome.webNavigation?.onCommitted.addListener((details) => {
+  if (details.frameId !== 0) return;
+  offeredTabs.delete(details.tabId);
+  prompting.delete(details.tabId);
+});
 
 /**
  * Offers a stream found on a page. Detection alone only filled the popup list,
@@ -125,16 +134,32 @@ async function offerMedia(tabId, item) {
   await ready;
   if (!settings.askAboutMedia || settings.captureMode === 'off') return;
   if (item.unsupported || offered.has(item.url)) return;
+
+  // One card per page. A player usually announces several quality variants of
+  // the same video, and asking about each stacked cards in the same corner --
+  // one click then landed on several of them and downloaded the video twice
+  // over. The rest stay listed in the popup.
+  if (offeredTabs.has(tabId) || prompting.has(tabId)) return;
+
+  // Already downloaded or downloading it: nothing to ask.
+  if (state.getTasks().some((task) => task.url === item.url)) return;
+
   offered.add(item.url);
   if (offered.size > 200) offered.delete(offered.values().next().value);
+  offeredTabs.add(tabId);
+  prompting.add(tabId);
 
-  const choice = await askAboutMedia({
-    tabId,
-    name: item.name,
-    label: item.bytes > 0 ? item.label : `${item.label} · ${hostOf(item.url)}`,
-  });
-  if (choice === CHOICE_MANAGER) {
-    await startManual({ url: item.url, name: item.name, kind: item.kind });
+  try {
+    const choice = await askAboutMedia({
+      tabId,
+      name: item.name,
+      label: item.bytes > 0 ? item.label : `${item.label} · ${hostOf(item.url)}`,
+    });
+    if (choice === CHOICE_MANAGER) {
+      await startManual({ url: item.url, name: item.name, kind: item.kind });
+    }
+  } finally {
+    prompting.delete(tabId);
   }
 }
 
