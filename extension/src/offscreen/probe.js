@@ -64,16 +64,16 @@ export function referrerInit(referrer) {
 }
 
 /**
- * Cookies go only to the origin the user actually asked to download from.
- * Playlist entries are page-controlled, so a hostile stream could otherwise
- * have the browser make credentialed requests to any host it names.
+ * Sends the session the browser itself would send.
+ *
+ * Cookies are scoped to their own origin, so "include" on a CDN request carries
+ * the CDN's cookies, not the site's -- it does not leak one host's session to
+ * another. Withholding them broke the case that matters most: a user who has
+ * signed in to a site and expects the file behind that login to download.
+ * Non-http schemes get nothing.
  */
-export function credentialsFor(url, baseUrl) {
-  try {
-    return new URL(url).origin === new URL(baseUrl).origin ? 'include' : 'omit';
-  } catch {
-    return 'omit';
-  }
+export function credentialsFor(url) {
+  return /^https?:/i.test(String(url)) ? 'include' : 'omit';
 }
 
 export class HttpError extends Error {

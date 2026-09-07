@@ -14,7 +14,7 @@ export async function loadPlaylist(url, { referrer = '', signal } = {}) {
 
   const variant = pickVariant(lines, url);
   const mediaUrl = variant ?? url;
-  const media = variant ? await fetchText(mediaUrl, referrer, signal, url) : master;
+  const media = variant ? await fetchText(mediaUrl, referrer, signal) : master;
 
   return parseMedia(media, mediaUrl, referrer, signal);
 }
@@ -108,7 +108,7 @@ async function readKey(line, baseUrl, referrer, signal) {
 
   const keyUrl = new URL(uri, baseUrl).href;
   const response = await fetch(keyUrl, {
-    credentials: credentialsFor(keyUrl, baseUrl),
+    credentials: credentialsFor(keyUrl),
     cache: 'no-store',
     signal,
     ...referrerInit(referrer),
@@ -151,9 +151,9 @@ function hexToBytes(hex) {
   return out;
 }
 
-async function fetchText(url, referrer, signal, base = url) {
+async function fetchText(url, referrer, signal) {
   const response = await fetch(url, {
-    credentials: credentialsFor(url, base),
+    credentials: credentialsFor(url),
     cache: 'no-store',
     signal,
     ...referrerInit(referrer),

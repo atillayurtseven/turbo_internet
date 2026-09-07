@@ -109,7 +109,7 @@ async function fetchSegment(segment, dir) {
     headers: range
       ? { Range: `bytes=${range.offset}-${range.offset + range.length - 1}` }
       : {},
-    credentials: credentialsFor(segment.url, config.playlistUrl ?? segment.url),
+    credentials: credentialsFor(segment.url),
     cache: 'no-store',
     redirect: 'follow',
     signal: controller.signal,

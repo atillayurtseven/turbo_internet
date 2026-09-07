@@ -4,6 +4,7 @@ import { joinPath, sanitizeFilename } from '../shared/filetypes.js';
 import { initI18n, t } from '../shared/i18n.js';
 import { matchRule } from './rules.js';
 import { clearMedia, mediaFor, registerMediaSniffer } from './media.js';
+import { clearReferer, setReferer } from './referer.js';
 import { CHOICE_MANAGER, askAboutMedia } from './prompt.js';
 import { registerInterceptor } from './interceptor.js';
 import { ensureOffscreen, sendToOffscreen } from './offscreen.js';
@@ -79,6 +80,8 @@ async function start(candidate) {
   const task = createTask(candidate);
   await state.upsert(task);
   broadcast();
+  // In place before the first byte is requested.
+  await setReferer(task.id, task.url, task.referrer);
   try {
     await sendToOffscreen(MSG.ENQUEUE, { task, settings });
   } catch (error) {
@@ -174,10 +177,23 @@ async function offerMedia(tabId, item) {
       label: item.bytes > 0 ? item.label : `${item.label} · ${hostOf(item.url)}`,
     });
     if (choice === CHOICE_MANAGER) {
-      await startManual({ url: item.url, name: item.name, kind: item.kind });
+      await startManual({ ...item, name: item.name, referrer: await pageUrl(tabId) });
     }
   } finally {
     prompting.delete(tabId);
+  }
+}
+
+/** The page a download was started from, used as its Referer. */
+function pageOf(tab) {
+  return /^https?:/i.test(tab?.url || '') ? tab.url : '';
+}
+
+async function pageUrl(tabId) {
+  try {
+    return pageOf(await chrome.tabs.get(tabId));
+  } catch {
+    return '';
   }
 }
 
@@ -190,7 +206,7 @@ function hostOf(url) {
 }
 
 /** Queues something the user picked by hand: a page's media, or a pasted URL. */
-async function startManual({ url, name, kind }) {
+async function startManual({ url, name, kind, referrer = '' }) {
   await ready;
   // The interceptor path checks this in rules.js; messages come in unchecked.
   if (!/^https?:\/\//i.test(String(url))) throw new Error('unsupported-scheme');
@@ -200,7 +216,9 @@ async function startManual({ url, name, kind }) {
     url,
     filename,
     mime: '',
-    referrer: '',
+    // Carried through: a protected CDN checks it, and without one the file the
+    // user is signed in for comes back 403.
+    referrer,
     sizeHint: 0,
     kind: kind === KIND.HLS ? KIND.HLS : KIND.FILE,
     // Picked deliberately, so neither the size gate nor capture flags apply.
@@ -347,9 +365,11 @@ async function handleMessage(message, sender) {
     }
 
     case MSG.DOWNLOAD_MEDIA:
-    case MSG.DOWNLOAD_URL:
-      await startManual(payload ?? {});
+    case MSG.DOWNLOAD_URL: {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      await startManual({ referrer: pageOf(tab), ...(payload ?? {}) });
       return { ok: true };
+    }
 
     case MSG.CLEAR_COMPLETED:
       await state.clearCompleted(payload?.all === true);
@@ -461,6 +481,7 @@ async function settle(downloadId, downloadState, error) {
   if (!task || TERMINAL_STATUSES.has(task.status)) return;
 
   deliveries.delete(task.deliveryUrl);
+  await clearReferer(task.id);
   if (downloadState === 'complete') {
     await state.upsert({
       id: task.id,

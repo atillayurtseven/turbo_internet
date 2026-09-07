@@ -14,7 +14,8 @@
     "webRequest",
     "webNavigation",
     "tabs",
-    "clipboardRead"
+    "clipboardRead",
+    "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
     "<all_urls>"
