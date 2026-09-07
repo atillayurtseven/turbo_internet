@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   captureMode: 'ask', // 'ask' | 'always' | 'off'
   clipboardWatch: true,
   detectMedia: true,
+  remuxToMp4: true,
   promptSeconds: 20,
   probeRanges: true,
   fallbackSingleConnection: true,
@@ -25,7 +26,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
       mimePatterns: [],
       capture: true,
       connections: 8,
-      minSizeBytes: 50 * MB,
+      minSizeBytes: 20 * MB,
       subfolder: '',
     },
     {
@@ -35,7 +36,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
       mimePatterns: ['application/zip', 'application/x-7z-compressed'],
       capture: true,
       connections: 4,
-      minSizeBytes: 20 * MB,
+      minSizeBytes: 10 * MB,
       subfolder: '',
     },
     {
@@ -45,7 +46,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
       mimePatterns: ['video/*'],
       capture: true,
       connections: 6,
-      minSizeBytes: 10 * MB,
+      minSizeBytes: 5 * MB,
       subfolder: '',
     },
     {
@@ -55,7 +56,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
       mimePatterns: [],
       capture: true,
       connections: 4,
-      minSizeBytes: 5 * MB,
+      minSizeBytes: 2 * MB,
       subfolder: '',
     },
     {
@@ -103,6 +104,7 @@ export function normalizeSettings(raw) {
     captureMode: ['ask', 'always', 'off'].includes(raw?.captureMode) ? raw.captureMode : 'ask',
     clipboardWatch: raw?.clipboardWatch !== false,
     detectMedia: raw?.detectMedia !== false,
+    remuxToMp4: raw?.remuxToMp4 !== false,
     promptSeconds: clampInt(raw?.promptSeconds, 5, 120, d.promptSeconds),
     probeRanges: raw?.probeRanges !== false,
     fallbackSingleConnection: raw?.fallbackSingleConnection !== false,

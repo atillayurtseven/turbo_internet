@@ -201,6 +201,52 @@ export class Engine {
     }
   }
 
+  /**
+   * MPEG-TS plays in few things outside VLC, so a stream that came down as TS
+   * is rewrapped as MP4 before delivery. Nothing is re-encoded.
+   */
+  async #afterDownload(task) {
+    const needsRemux =
+      task.kind === KIND.HLS && task.container === 'ts' && this.#settings.remuxToMp4;
+    if (!needsRemux) {
+      await this.#finish(task);
+      return;
+    }
+
+    this.#setStatus(task, STATUS.REMUXING);
+    const worker = new Worker(new URL('./remux-worker.js', import.meta.url));
+    this.#workers.set(task.id, worker);
+
+    worker.onmessage = (event) => {
+      const message = event.data ?? {};
+      if (message.type === 'progress') return;
+      if (message.type === 'done') {
+        this.#onWorkerMessage(task.id, { type: 'remuxed', parts: message.parts });
+      } else if (message.type === 'error') {
+        this.#terminate(task.id);
+        // The segments are still on disk, so the stream is delivered as TS
+        // rather than lost.
+        console.warn('[dlman/engine] remux failed, delivering TS', message.message);
+        this.#finish(task).catch((error) => this.#fail(task, error));
+      }
+    };
+    worker.onerror = (event) => {
+      console.warn('[dlman/engine] remux worker failed, delivering TS', event.message);
+      this.#terminate(task.id);
+      this.#finish(task).catch((error) => this.#fail(task, error));
+    };
+
+    worker.postMessage({
+      type: 'start',
+      payload: {
+        id: task.id,
+        count: task.segments.length,
+        seconds: task.durationSeconds ?? 0,
+        segmentSeconds: (this.#hlsParts.get(task.id) ?? []).map((part) => part.seconds ?? 0),
+      },
+    });
+  }
+
   /** Reads the playlist and turns it into the task's segment plan. */
   async #prepareHls(task) {
     this.#setStatus(task, STATUS.PROBING);
@@ -221,6 +267,7 @@ export class Engine {
         parts.push({
           index: parts.length,
           url: part.url,
+          seconds: part.seconds ?? 0,
           byteRange: part.byteRange,
           key: part.key,
           iv: part.iv,
@@ -239,6 +286,7 @@ export class Engine {
       task.mime = playlist.container === 'mp4' ? 'video/mp4' : 'video/mp2t';
       task.filename = withExtension(task.filename, playlist.container);
       task.totalBytes = 0;
+      task.durationSeconds = playlist.duration;
 
       console.info('[dlman/engine] playlist', task.filename, {
         segments: parts.length,
@@ -352,6 +400,21 @@ export class Engine {
       case 'done':
         task.receivedBytes = message.receivedBytes ?? task.receivedBytes;
         this.#terminate(id);
+        this.#afterDownload(task).catch((error) => this.#fail(task, error));
+        break;
+
+      case 'remuxed':
+        this.#terminate(id);
+        task.partPrefix = `${task.id}-mux`;
+        task.segments = Array.from({ length: message.parts }, (_, index) => ({
+          index,
+          start: index,
+          end: index,
+          received: 1,
+        }));
+        task.container = 'mp4';
+        task.mime = 'video/mp4';
+        task.filename = withExtension(task.filename, 'mp4');
         this.#finish(task).catch((error) => this.#fail(task, error));
         break;
 
@@ -381,7 +444,7 @@ export class Engine {
 
   async #finish(task) {
     this.#setStatus(task, STATUS.ASSEMBLING);
-    const blob = await assemble(task.id, task.segments, task.mime);
+    const blob = await assemble(task.partPrefix ?? task.id, task.segments, task.mime);
 
     if (task.totalBytes > 0 && blob.size !== task.totalBytes) {
       throw new Error(`size mismatch: got ${blob.size}, expected ${task.totalBytes}`);

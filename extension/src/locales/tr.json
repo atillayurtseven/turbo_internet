@@ -89,5 +89,8 @@
   "options.general.detectMedia": "Sayfalardaki medyayı algıla",
   "options.general.detectMediaDesc": "Sayfada bulunan HLS akışlarını ve büyük video dosyalarını listeler. YouTube kapsam dışıdır.",
   "options.general.clipboardWatch": "Kopyalanan bağlantıları izle",
-  "options.general.clipboardWatchDesc": "Yalnızca sayfada kopyalanan kısa http(s) adresleri okunur; başka hiçbir şey sayfadan çıkmaz."
+  "options.general.clipboardWatchDesc": "Yalnızca sayfada kopyalanan kısa http(s) adresleri okunur; başka hiçbir şey sayfadan çıkmaz.",
+  "status.remuxing": "MP4'e çevriliyor…",
+  "options.general.remux": "Akışları MP4'e çevir",
+  "options.general.remuxDesc": "MPEG-TS segmentlerini MP4 kabına alır. Görüntü ve ses yeniden kodlanmaz, kopyalanır."
 }

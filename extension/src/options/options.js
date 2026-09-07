@@ -123,6 +123,7 @@ function renderGeneral() {
     captureModeRow(),
     switchRow('options.general.detectMedia', 'options.general.detectMediaDesc', 'detectMedia'),
     switchRow('options.general.clipboardWatch', 'options.general.clipboardWatchDesc', 'clipboardWatch'),
+    switchRow('options.general.remux', 'options.general.remuxDesc', 'remuxToMp4'),
     switchRow('options.general.probe', 'options.general.probeDesc', 'probeRanges'),
     switchRow('options.general.fallback', 'options.general.fallbackDesc', 'fallbackSingleConnection'),
     numberRow('options.general.maxConcurrent', 'options.general.maxConcurrentDesc',

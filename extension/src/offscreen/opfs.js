@@ -26,13 +26,13 @@ export function partName(taskId, index) {
  * The MIME type matters: Chrome rewrites the extension of a downloaded blob to
  * match its type, so an untyped blob turns "disk.iso" into "disk.txt".
  */
-export async function assemble(taskId, segments, type = 'application/octet-stream') {
+export async function assemble(prefix, segments, type = 'application/octet-stream') {
   const handle = await dir();
   const parts = [];
   // Ordered by offset, not by index: work stealing appends split segments whose
   // index says nothing about where they belong in the file.
   for (const segment of [...segments].sort((a, b) => a.start - b.start)) {
-    const file = await handle.getFileHandle(partName(taskId, segment.index), { create: false });
+    const file = await handle.getFileHandle(partName(prefix, segment.index), { create: false });
     parts.push(await file.getFile());
   }
   return new Blob(parts, { type: type || 'application/octet-stream' });
@@ -56,7 +56,7 @@ export async function partSizes(taskId, segmentCount) {
 export async function deleteParts(taskId) {
   const handle = await dir();
   for await (const [name] of handle.entries()) {
-    if (name.startsWith(`${taskId}.`)) {
+    if (name.startsWith(taskId)) {
       try {
         await handle.removeEntry(name);
       } catch {
@@ -71,7 +71,8 @@ export async function pruneOrphans(knownTaskIds) {
   const known = new Set(knownTaskIds);
   const handle = await dir();
   for await (const [name] of handle.entries()) {
-    if (!known.has(name.split('.')[0])) {
+    // Remuxed parts are stored under "<id>-mux"; they belong to the same task.
+    if (!known.has(name.split('.')[0].replace(/-mux$/, ''))) {
       try {
         await handle.removeEntry(name);
       } catch {

@@ -30,7 +30,16 @@ export function registerInterceptor({ getSettings, getCachedSettings, resolveOwn
     // way entirely rather than re-asserting a filename. The synchronous path
     // needs settings in hand; a cold start falls through to the async one.
     const cached = getCachedSettings();
-    if (cached && !evaluateWith(cached, item).capture) return false;
+    if (cached) {
+      const verdict = evaluateWith(cached, item);
+      if (!verdict.capture) {
+        // Logged rather than dropped silently: "below-min-size" is by far the
+        // most common reason a download is not taken over, and an unexplained
+        // no-op looks like a broken extension.
+        console.info('[dlman] skipped', verdict.reason, verdict.filename);
+        return false;
+      }
+    }
 
     let suggested = false;
     const finish = () => {
@@ -89,11 +98,14 @@ function evaluateWith(settings, item) {
 }
 
 /**
- * Holds Chrome's download while the user is asked. Saying no simply resumes it,
- * so the file still arrives either way.
+ * Stops Chrome first, then asks. Pausing and asking was the obvious order but
+ * pause() is unreliable on a download that has only just started, and a failed
+ * pause meant Chrome and this extension fetched the same file side by side.
+ * Declining restarts the download in Chrome; a few lost seconds beats two
+ * copies of the file.
  */
 async function confirmThenTakeOver(item, verdict, onCapture) {
-  const paused = await pause(item.id);
+  await stopChrome(item.id);
 
   const choice = await askUser({
     filename: verdict.filename,
@@ -102,46 +114,38 @@ async function confirmThenTakeOver(item, verdict, onCapture) {
   });
 
   if (choice === CHOICE_MANAGER) {
-    await takeOver(item, verdict, onCapture);
+    await enqueue(item, verdict, onCapture);
     return;
   }
 
-  console.info('[dlman] declined, Chrome keeps the download', verdict.filename);
-  if (paused) {
-    try {
-      await chrome.downloads.resume(item.id);
-    } catch (error) {
-      console.error('[dlman] could not resume Chrome download', error);
-    }
-  }
-}
-
-/** The download may not be in progress yet, so pausing gets a few tries. */
-async function pause(id) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    try {
-      await chrome.downloads.pause(id);
-      return true;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-  }
-  console.warn('[dlman] could not pause; Chrome keeps downloading while we ask');
-  return false;
-}
-
-async function takeOver(item, verdict, onCapture) {
-  console.info('[dlman] capturing', verdict.filename, `rule=${verdict.rule.id}`);
+  console.info('[dlman] declined, handing back to Chrome', verdict.filename);
   try {
-    await chrome.downloads.cancel(item.id);
+    await chrome.downloads.download({ url: verdict.url, conflictAction: 'uniquify' });
+  } catch (error) {
+    console.error('[dlman] could not hand back to Chrome', error);
+  }
+}
+
+async function stopChrome(id) {
+  try {
+    await chrome.downloads.cancel(id);
   } catch {
     // Already finished or gone; nothing to cancel.
   }
   try {
-    await chrome.downloads.erase({ id: item.id });
+    await chrome.downloads.erase({ id });
   } catch {
     // Erasing only affects the visible list; ignore.
   }
+}
+
+async function takeOver(item, verdict, onCapture) {
+  await stopChrome(item.id);
+  await enqueue(item, verdict, onCapture);
+}
+
+async function enqueue(item, verdict, onCapture) {
+  console.info('[dlman] capturing', verdict.filename, `rule=${verdict.rule.id}`);
   await onCapture({
     url: verdict.url,
     filename: verdict.filename,

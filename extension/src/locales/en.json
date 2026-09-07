@@ -89,5 +89,8 @@
   "options.general.detectMedia": "Detect media on pages",
   "options.general.detectMediaDesc": "Lists HLS streams and large video files found on the page. YouTube is excluded.",
   "options.general.clipboardWatch": "Watch copied links",
-  "options.general.clipboardWatchDesc": "Only short http(s) URLs copied on a page are read; nothing else leaves the page."
+  "options.general.clipboardWatchDesc": "Only short http(s) URLs copied on a page are read; nothing else leaves the page.",
+  "status.remuxing": "Converting to MP4…",
+  "options.general.remux": "Convert streams to MP4",
+  "options.general.remuxDesc": "Rewraps MPEG-TS segments as MP4. Video and audio are copied, not re-encoded."
 }

@@ -46,6 +46,7 @@ async function parseMedia(text, baseUrl, referrer, signal) {
   // Byte-range playlists point every segment at the same file; the offset is
   // optional and then continues where the previous segment ended.
   let pendingRange = null;
+  let pendingDuration = 0;
   const nextOffset = new Map();
   let sequence = Number(/#EXT-X-MEDIA-SEQUENCE:(\d+)/.exec(text)?.[1] ?? 0);
   let duration = 0;
@@ -69,7 +70,8 @@ async function parseMedia(text, baseUrl, referrer, signal) {
       continue;
     }
     if (line.startsWith('#EXTINF')) {
-      duration += Number(/#EXTINF:([\d.]+)/.exec(line)?.[1] ?? 0);
+      pendingDuration = Number(/#EXTINF:([\d.]+)/.exec(line)?.[1] ?? 0);
+      duration += pendingDuration;
       continue;
     }
     if (!line || line.startsWith('#')) continue;
@@ -80,11 +82,13 @@ async function parseMedia(text, baseUrl, referrer, signal) {
 
     parts.push({
       url,
+      seconds: pendingDuration,
       byteRange,
       key,
       // The IV defaults to the media sequence number when the tag omits one.
       iv: key?.iv ?? (key ? sequenceIv(sequence) : null),
     });
+    pendingDuration = 0;
     sequence += 1;
   }
 

@@ -38,7 +38,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/locales/*.json"
+        "src/locales/*.json",
+        "vendor/*.js"
       ],
       "matches": [
         "<all_urls>"
