@@ -62,6 +62,11 @@ body { width: 380px; max-height: 560px; display: flex; flex-direction: column; }
 .sources h2 {
   margin: 0; padding: 8px 14px 4px; font-size: 10px; font-weight: 600;
   color: var(--dim); text-transform: uppercase; letter-spacing: .4px;
+  display: flex; align-items: center;
+}
+.sources h2 .clear-media {
+  margin-left: auto; font-size: 10px; padding: 1px 7px;
+  text-transform: none; letter-spacing: 0;
 }
 .source { display: flex; align-items: center; gap: 8px; padding: 7px 14px; }
 .source .tag {

@@ -3,7 +3,7 @@ import { loadSettings, onSettingsChanged } from '../shared/settings.js';
 import { joinPath } from '../shared/filetypes.js';
 import { initI18n, t } from '../shared/i18n.js';
 import { matchRule } from './rules.js';
-import { mediaFor, registerMediaSniffer } from './media.js';
+import { clearMedia, mediaFor, registerMediaSniffer } from './media.js';
 import { CHOICE_MANAGER, askAboutMedia } from './prompt.js';
 import { registerInterceptor } from './interceptor.js';
 import { ensureOffscreen, sendToOffscreen } from './offscreen.js';
@@ -288,6 +288,16 @@ async function handleMessage(message, sender) {
     case MSG.GET_MEDIA: {
       const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       return { ok: true, media: tab ? mediaFor(tab.id) : [] };
+    }
+
+    case MSG.CLEAR_MEDIA: {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      if (tab) {
+        clearMedia(tab.id);
+        offeredTabs.delete(tab.id);
+      }
+      broadcast();
+      return { ok: true };
     }
 
     case MSG.DOWNLOAD_MEDIA:

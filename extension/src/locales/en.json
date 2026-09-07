@@ -98,5 +98,6 @@
   "prompt.noMedia": "No thanks",
   "prompt.dismiss": "Closing in {n} s",
   "options.general.askMedia": "Ask about videos found on pages",
-  "options.general.askMediaDesc": "Shows the same card when a stream is spotted. Off means they are only listed in the popup."
+  "options.general.askMediaDesc": "Shows the same card when a stream is spotted. Off means they are only listed in the popup.",
+  "popup.clearMedia": "Clear list"
 }

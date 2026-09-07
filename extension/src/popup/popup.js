@@ -71,6 +71,17 @@ async function renderSources() {
       heading = group;
       const title = document.createElement('h2');
       title.textContent = group;
+      if (group === t('popup.mediaFound')) {
+        const clear = document.createElement('button');
+        clear.className = 'clear-media';
+        clear.textContent = t('popup.clearMedia');
+        clear.addEventListener('click', async () => {
+          box.dataset.key = '';
+          await send(MSG.CLEAR_MEDIA);
+          renderSources();
+        });
+        title.append(clear);
+      }
       box.append(title);
     }
     box.append(node);

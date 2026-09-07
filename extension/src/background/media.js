@@ -21,6 +21,9 @@ const PLAYLIST_TYPES = [
 
 const MIN_DIRECT_BYTES = 1024 * 1024;
 const MAX_PER_TAB = 25;
+// Entries go stale: a player re-requests playlists constantly, and a list that
+// never empties keeps offering URLs the page has long since stopped using.
+const TTL_MS = 10 * 60 * 1000;
 
 /** tabId -> Map(url -> item) */
 const perTab = new Map();
@@ -46,7 +49,17 @@ export function registerMediaSniffer(onChange) {
 }
 
 export function mediaFor(tabId) {
-  return [...(perTab.get(tabId)?.values() ?? [])].reverse();
+  const now = Date.now();
+  const list = perTab.get(tabId);
+  if (!list) return [];
+  for (const [url, item] of list) {
+    if (now - item.at > TTL_MS) list.delete(url);
+  }
+  return [...list.values()].reverse();
+}
+
+export function clearMedia(tabId) {
+  perTab.delete(tabId);
 }
 
 function classify(details) {
@@ -82,7 +95,7 @@ function remember(tabId, item, onChange) {
     perTab.set(tabId, list);
   }
   if (list.has(item.url)) return;
-  list.set(item.url, item);
+  list.set(item.url, { ...item, at: Date.now() });
   while (list.size > MAX_PER_TAB) list.delete(list.keys().next().value);
   onChange(tabId, item);
 }
