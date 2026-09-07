@@ -214,19 +214,28 @@ function infoParts(task) {
   return parts;
 }
 
+// Beyond this a per-segment bar reads as a comb rather than as progress, so
+// segments are pooled into this many cells. An HLS stream easily has hundreds.
+const MAX_CELLS = 16;
+
 function barSegments(task) {
   // By offset, not array order: work stealing appends split segments at the end.
-  const segments = task.segments?.length
+  const ordered = task.segments?.length
     ? [...task.segments].sort((a, b) => a.start - b.start)
     : [null];
+  const segments = ordered.length > MAX_CELLS ? pool(ordered, MAX_CELLS) : ordered;
+
   return segments.map((segment) => {
     const wrap = document.createElement('div');
     wrap.className = 'seg';
-    wrap.style.flex = segment && segment.end !== null ? String(segment.end - segment.start + 1) : '1';
+    wrap.style.flex =
+      segment && segment.end !== null
+        ? String(segment.total ?? segment.end - segment.start + 1)
+        : '1';
 
     const fill = document.createElement('i');
     const ratio = segment && segment.end !== null
-      ? percent(segment.received, segment.end - segment.start + 1)
+      ? percent(segment.received, segment.total ?? segment.end - segment.start + 1)
       : percent(task.receivedBytes, task.totalBytes);
     fill.style.width = `${ratio}%`;
     if (ratio >= 100) wrap.classList.add('done');
@@ -234,6 +243,22 @@ function barSegments(task) {
     wrap.append(fill);
     return wrap;
   });
+}
+
+/** Merges consecutive segments into `cells` buckets, keeping their proportions. */
+function pool(segments, cells) {
+  const perCell = Math.ceil(segments.length / cells);
+  const out = [];
+  for (let i = 0; i < segments.length; i += perCell) {
+    const group = segments.slice(i, i + perCell);
+    out.push({
+      start: group[0].start,
+      end: group[group.length - 1].end,
+      received: group.reduce((sum, part) => sum + part.received, 0),
+      total: group.reduce((sum, part) => sum + (part.end - part.start + 1), 0),
+    });
+  }
+  return out;
 }
 
 function actions(task) {
