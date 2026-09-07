@@ -344,6 +344,9 @@ const ERROR_TEXT = new Map([
   ['delivery-lost', 'error.deliveryLost'],
   ['part-mismatch', 'error.partMismatch'],
   ['file-changed', 'error.fileChanged'],
+  ['HTTP 404', 'error.notFound'],
+  ['HTTP 403', 'error.forbidden'],
+  ['HTTP 410', 'error.notFound'],
 ]);
 
 function describeError(error) {

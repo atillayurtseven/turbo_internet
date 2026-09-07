@@ -116,5 +116,7 @@
   "action.copyLink": "Copy link",
   "action.redownload": "Download again",
   "options.general.checksum": "Calculate SHA-256 after downloading",
-  "options.general.checksumDesc": "Lets you compare against a published checksum. Reading the file back takes a while on large downloads."
+  "options.general.checksumDesc": "Lets you compare against a published checksum. Reading the file back takes a while on large downloads.",
+  "error.notFound": "The server no longer has this file",
+  "error.forbidden": "The server refused access to this address"
 }

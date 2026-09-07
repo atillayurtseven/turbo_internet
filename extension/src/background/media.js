@@ -37,6 +37,13 @@ export function registerMediaSniffer(onChange) {
     (details) => {
       const item = classify(details);
       if (!item) return;
+
+      if (item.kind === 'hls') {
+        playlistUsable(item.url).then((usable) => {
+          if (usable) remember(details.tabId, item, onChange);
+        });
+        return;
+      }
       if (item.kind !== 'file') {
         remember(details.tabId, item, onChange);
         return;
@@ -117,6 +124,26 @@ function classify(details) {
  * extension and a token for a name. A real file opens with an `ftyp` box, a
  * fragment with `moof` or `styp`, so the file itself is asked instead.
  */
+/**
+ * Checks that a playlist is actually reachable and is a playlist.
+ *
+ * Offering something we cannot fetch is worse than not offering it: the user
+ * clicks Download and gets an error, which reads as a broken extension rather
+ * than a server saying no.
+ */
+async function playlistUsable(url) {
+  try {
+    // Same credentials the real download will use, so the check cannot reject
+    // a stream that would in fact have worked.
+    const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+    if (!response.ok) return false;
+    const head = (await response.text()).slice(0, 256).trimStart();
+    return head.startsWith('#EXTM3U');
+  } catch {
+    return false;
+  }
+}
+
 async function looksComplete(url) {
   try {
     const response = await fetch(url, {

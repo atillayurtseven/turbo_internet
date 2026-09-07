@@ -116,5 +116,7 @@
   "action.copyLink": "Bağlantıyı kopyala",
   "action.redownload": "Yeniden indir",
   "options.general.checksum": "İndirme bitince SHA-256 hesapla",
-  "options.general.checksumDesc": "Yayınlanan sağlama toplamıyla karşılaştırmanı sağlar. Büyük dosyalarda dosyayı yeniden okumak zaman alır."
+  "options.general.checksumDesc": "Yayınlanan sağlama toplamıyla karşılaştırmanı sağlar. Büyük dosyalarda dosyayı yeniden okumak zaman alır.",
+  "error.notFound": "Sunucuda böyle bir dosya yok",
+  "error.forbidden": "Sunucu bu adrese erişimi reddetti"
 }
