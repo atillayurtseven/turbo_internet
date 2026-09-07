@@ -360,6 +360,18 @@ function describeError(error) {
 }
 
 function barSegments(task) {
+  // A finished download is one thing, not a row of pieces: leaving the segment
+  // dividers in made a complete file look ragged and unfinished.
+  if (task.status === STATUS.COMPLETED) {
+    const wrap = document.createElement('div');
+    wrap.className = 'seg done';
+    wrap.style.flex = '1';
+    const fill = document.createElement('i');
+    fill.style.width = '100%';
+    wrap.append(fill);
+    return [wrap];
+  }
+
   // Memoised: an HLS task carries thousands of segments and this ran for every
   // row on every broadcast, twice a second.
   const key = `${task.status}:${task.receivedBytes}:${task.segments?.length ?? 0}`;
