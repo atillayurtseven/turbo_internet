@@ -5,6 +5,20 @@ const KEY = 'tasks';
 let tasks = [];
 let loaded = false;
 
+/**
+ * Ids the user removed. The engine's progress snapshots arrive on a timer and
+ * carry every task it still holds, so without this a removed row reappeared a
+ * moment later and looked impossible to delete.
+ */
+const removed = new Set();
+const MAX_TOMBSTONES = 300;
+
+function tombstone(id) {
+  if (!id) return;
+  removed.add(id);
+  while (removed.size > MAX_TOMBSTONES) removed.delete(removed.values().next().value);
+}
+
 export async function loadState() {
   if (loaded) return tasks;
   const stored = await chrome.storage.local.get(KEY);
@@ -31,6 +45,7 @@ export async function replaceState(snapshot) {
     return update ? { ...task, ...update } : task;
   });
   for (const task of snapshot) {
+    if (removed.has(task.id)) continue;
     if (!merged.some((existing) => existing.id === task.id)) merged.push(task);
   }
   tasks = trim(merged);
@@ -39,6 +54,7 @@ export async function replaceState(snapshot) {
 }
 
 export async function upsert(task) {
+  if (removed.has(task.id)) return tasks;
   const index = tasks.findIndex((existing) => existing.id === task.id);
   if (index >= 0) tasks[index] = { ...tasks[index], ...task };
   else tasks.unshift(task);
@@ -48,12 +64,15 @@ export async function upsert(task) {
 }
 
 export async function remove(id) {
+  tombstone(id);
   tasks = tasks.filter((task) => task.id !== id);
   await persist();
   return tasks;
 }
 
 export async function clearCompleted(all = false) {
+  const dropped = all ? tasks : tasks.filter((task) => TERMINAL_STATUSES.has(task.status));
+  for (const task of dropped) tombstone(task.id);
   tasks = all ? [] : tasks.filter((task) => !TERMINAL_STATUSES.has(task.status));
   await persist();
   return tasks;
