@@ -4,7 +4,7 @@ const MB = 1024 * 1024;
 const STORAGE_KEY = 'settings';
 
 export const DEFAULT_SETTINGS = Object.freeze({
-  version: 1,
+  version: 2,
   language: 'auto',
   captureMode: 'ask', // 'ask' | 'always' | 'off'
   clipboardWatch: true,
@@ -94,6 +94,28 @@ function normalizeRule(raw, index) {
   };
 }
 
+/**
+ * Version 1 shipped size thresholds that were too high in practice -- a 40 MB
+ * .dmg fell through to Chrome. Stored rules still carrying an old default are
+ * moved to the new one; anything the user edited themselves is left alone.
+ */
+const V1_THRESHOLDS = new Map([
+  ['disk-images', 50 * MB],
+  ['archives', 20 * MB],
+  ['video', 10 * MB],
+  ['installers', 5 * MB],
+]);
+
+function migrateRules(rules, storedVersion) {
+  if (storedVersion >= 2) return rules;
+  return rules.map((rule) => {
+    const old = V1_THRESHOLDS.get(rule.id);
+    if (old === undefined || rule.minSizeBytes !== old) return rule;
+    const fresh = DEFAULT_SETTINGS.rules.find((item) => item.id === rule.id);
+    return { ...rule, minSizeBytes: fresh?.minSizeBytes ?? rule.minSizeBytes };
+  });
+}
+
 /** Coerces stored settings into a valid shape; unknown fields are dropped. */
 export function normalizeSettings(raw) {
   const d = DEFAULT_SETTINGS;
@@ -113,7 +135,10 @@ export function normalizeSettings(raw) {
     segmentRetries: clampInt(raw?.segmentRetries, 0, 20, d.segmentRetries),
     retryBackoffMs: clampInt(raw?.retryBackoffMs, 100, 60000, d.retryBackoffMs),
     minSegmentSizeBytes: clampInt(raw?.minSegmentSizeBytes, 64 * 1024, 512 * MB, d.minSegmentSizeBytes),
-    rules: Array.isArray(raw?.rules) ? raw.rules.map(normalizeRule) : d.rules.map(normalizeRule),
+    rules: migrateRules(
+      Array.isArray(raw?.rules) ? raw.rules.map(normalizeRule) : d.rules.map(normalizeRule),
+      Number(raw?.version) || 1,
+    ),
   };
 }
 

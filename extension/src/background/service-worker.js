@@ -21,6 +21,10 @@ const ready = (async () => {
   settings = await loadSettings();
   await state.loadState();
   await initI18n(settings.language);
+  console.info('[dlman] ready', {
+    captureMode: settings.captureMode,
+    rules: settings.rules.map((rule) => `${rule.id}:${rule.capture ? '' : 'off:'}${Math.round(rule.minSizeBytes / 1048576)}MB`),
+  });
 })();
 
 onSettingsChanged(async (next) => {
@@ -92,9 +96,15 @@ async function installContextMenu() {
   });
 }
 
-registerMediaSniffer(() => {
-  if (settings?.detectMedia) broadcast();
-});
+try {
+  registerMediaSniffer(() => {
+    if (settings?.detectMedia) broadcast();
+  });
+} catch (error) {
+  // Media detection is a nicety; a missing API must never stop downloads from
+  // being captured, which is what a throw at this point would do.
+  console.error('[dlman] media detection unavailable', error);
+}
 
 /** Last http(s) URL seen on a copy event, offered as a suggestion in the popup. */
 let clipboard = null;
