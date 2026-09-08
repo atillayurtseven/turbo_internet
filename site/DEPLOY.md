@@ -34,8 +34,14 @@ Check before going further — TLS issuance fails until these resolve:
 
     sudo certbot --nginx -d turbointernet.com -d www.turbointernet.com
 
-Certbot edits the server block to listen on 443 and redirect from 80. Renewal
-is handled by its own timer; nothing else to schedule.
+Both names are on the certificate even though only the bare domain serves
+content: without it, `https://www.…` would warn before the redirect could run.
+Certbot edits both blocks to listen on 443 and redirects port 80 to HTTPS.
+Renewal runs from its own timer; nothing else to schedule.
+
+After it finishes, check the redirect survived the rewrite:
+
+    curl -sI https://www.turbointernet.com/ | head -2
 
 ## 5. Check
 
