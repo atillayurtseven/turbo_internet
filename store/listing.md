@@ -94,3 +94,56 @@ Privacy policy URL: https://turbointernet.com/privacy
 
 Downloads files over several connections at once. Rules per file type, resume,
 speed limit and an optional checksum.
+
+## Category
+
+Tools.
+
+Functionality & UI is for extensions that change how the browser itself looks
+or behaves. Productivity subcategories do not fit either. A download manager
+belongs under Tools. That is also where the established competitors sit. Users
+browsing that category are the ones looking for this.
+
+## Detailed description
+
+Turbo Internet Download Manager takes over the downloads you choose and fetches
+them over several connections at once. Where a server allows ranged requests
+this is faster than a single stream. Where it does not the extension falls back
+to one connection rather than failing.
+
+WHAT IT DOES
+
+Rules per file type. Decide which extensions are handled, how many connections
+each type gets, a minimum size below which Chrome keeps the download and a
+subfolder to save into. Disk images, archives, video and installers come
+configured out of the box.
+
+It asks before acting. By default a small card appears in the page when a
+matching download starts. Choose this extension or let Chrome carry on. Set it
+to always take over or never, whichever you prefer.
+
+Pause and resume. A paused download keeps what it already fetched and continues
+from there.
+
+Speed limit. Cap the total rate so a large download leaves room for everything
+else.
+
+Verification. Every piece is size checked before the file is assembled. A
+truncated part therefore cannot become a corrupt file. Turn on the optional SHA-256 to
+compare what you received against a checksum the publisher printed.
+
+Streams. HLS playlists playing on a page can be downloaded and converted into a
+plain MP4 that seeks properly in any player. Video and audio are copied rather
+than re-encoded. Nothing is lost and no quality setting is involved.
+
+WHAT IT DOES NOT DO
+
+YouTube and comparable platforms are out of scope. Downloading from them breaks
+their terms of service.
+
+PRIVACY
+
+Nothing is collected and nothing is sent anywhere. There is no account, no
+analytics and no server behind this extension. Your settings and your download
+list stay in your browser. Files travel straight from the site hosting them to
+your computer. Full policy: https://turbointernet.com/privacy

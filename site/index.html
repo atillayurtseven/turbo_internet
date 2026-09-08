@@ -4,69 +4,102 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Turbo Internet Download Manager</title>
-<meta name="description" content="A Chrome extension that downloads files over several connections at once. It recognises file types and verifies what it saved." />
+<meta name="description" content="A Chrome extension that downloads a file over several connections at once, resumes where it left off and verifies what it saved." />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="wrap">
 
-  <header>
-    <div class="mark"></div>
-    <div>
-      <h1>Turbo Internet Download Manager</h1>
-      <p>Chrome extension &middot; by TurboInternet</p>
-    </div>
-  </header>
+<nav>
+  <div class="mark"></div>
+  <b>Turbo Internet</b>
+  <div class="spacer"></div>
+  <a href="/privacy">Privacy</a>
+</nav>
 
-  <p class="lead">
-    Downloads a file over several connections at once. It picks up where it
-    left off and tells you exactly what it saved.
+<section class="hero">
+  <h1>One file.<br /><span>Every connection at once.</span></h1>
+  <p>
+    A Chrome extension that splits a download across several connections,
+    resumes where it left off and verifies what it saved.
   </p>
 
-  <h2>What it does</h2>
-  <ul>
-    <li><strong>Parallel downloading.</strong> Where the server allows ranged
-      requests, a file is split and fetched over several connections. A
-      connection that finishes early takes over part of a slower one.</li>
-    <li><strong>Rules per file type.</strong> Decide which extensions are taken
-      over, how many connections each gets, a minimum size and a subfolder.</li>
-    <li><strong>It asks first.</strong> By default a card appears in the page
-      before anything is taken over. Say no and Chrome keeps the download.</li>
-    <li><strong>Streams.</strong> HLS playlists found on a page can be
-      downloaded and converted to a plain, seekable MP4. Nothing is re-encoded.</li>
-    <li><strong>Verification.</strong> Every part is size-checked before the
-      file is assembled. An optional SHA-256 lets you compare against a
-      published checksum.</li>
-    <li><strong>Resume and rate limiting.</strong> Pause, resume, cap the speed.</li>
-  </ul>
+  <div class="cta">
+    <a class="btn primary" href="#install">Install</a>
+    <a class="btn ghost" href="/privacy">Privacy policy</a>
+  </div>
+  <small>Chrome 116 and later &middot; free &middot; no account</small>
 
+  <div class="demo">
+    <div class="file"><b>ubuntu-24.04.iso</b> <i>3.2 GB</i></div>
+    <div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="legend"><span>6 connections</span><span>work stealing on</span></div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="feat">
+    <h3>Parallel by default</h3>
+    <p>Where the server allows ranged requests, the file is split and fetched
+       over several connections at once.</p>
+  </div>
+  <div class="feat">
+    <h3>Work stealing</h3>
+    <p>A connection that finishes early takes over half of whichever part has
+       the most left to do.</p>
+  </div>
+  <div class="feat">
+    <h3>Rules per file type</h3>
+    <p>Choose which extensions are taken over, how many connections each gets,
+       a minimum size and a subfolder.</p>
+  </div>
+  <div class="feat">
+    <h3>It asks first</h3>
+    <p>A card appears in the page before anything is taken over. Say no and
+       Chrome keeps the download.</p>
+  </div>
+  <div class="feat">
+    <h3>Streams to real MP4</h3>
+    <p>HLS playlists found on a page become a plain, seekable MP4. Nothing is
+       re-encoded.</p>
+  </div>
+  <div class="feat">
+    <h3>Verified, not just finished</h3>
+    <p>Every part is size-checked before the file is assembled. SHA-256 is
+       there when you have a checksum to compare.</p>
+  </div>
+</section>
+
+<section class="section" id="install">
+  <h2>Install</h2>
+  <p>
+    A Chrome Web Store listing is on the way. Until then the extension loads
+    from source: open <code>chrome://extensions</code>, turn on Developer mode,
+    choose <em>Load unpacked</em> and select the <code>extension</code> folder.
+  </p>
+</section>
+
+<section class="section">
   <h2>What it will not do</h2>
   <p>
     YouTube and comparable platforms are out of scope. Downloading from them
-    breaks their terms of service. Chrome Web Store policy forbids extensions
-    that do it.
+    breaks their terms of service, and Chrome Web Store policy forbids
+    extensions that do it.
   </p>
+</section>
 
-  <h2>Install</h2>
-  <p class="note">
-    A Chrome Web Store listing is on the way. Until then the extension can be
-    loaded from source: open <code>chrome://extensions</code>, turn on Developer
-    mode, choose <em>Load unpacked</em> and select the <code>extension</code>
-    folder.
+<section class="section">
+  <h2>Privacy in one line</h2>
+  <p>
+    Nothing is collected and nothing is sent to us. There is no server behind
+    this extension. <a href="/privacy">Read the full policy</a>.
   </p>
+</section>
 
-  <div class="card">
-    <h3>Privacy in one line</h3>
-    <p style="margin-bottom:0">
-      Nothing is collected and nothing is sent to us. There is no server behind
-      this extension. <a href="/privacy">Read the full policy</a>.
-    </p>
-  </div>
+<footer>
+  <span>TurboInternet</span>
+  <span class="spacer"></span>
+  <a href="/privacy">Privacy</a>
+</footer>
 
-  <footer>
-    TurboInternet &middot; <a href="/privacy">Privacy</a>
-  </footer>
-
-</div>
 </body>
 </html>
