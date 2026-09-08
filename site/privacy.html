@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — Turbo Internet Download Manager</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mark"></div>
+    <div>
+      <h1>Privacy Policy</h1>
+      <p>Turbo Internet Download Manager &middot; last updated 8 September 2026</p>
+    </div>
+  </header>
+
+  <p class="lead">
+    This extension collects nothing, sends nothing anywhere, and has no server
+    behind it. Everything it does happens inside your own browser.
+  </p>
+
+  <h2>What is stored, and where</h2>
+  <ul>
+    <li><strong>Your settings</strong> — rules, connection counts, language and
+      similar preferences. Kept in Chrome's own extension storage, which syncs
+      through your Google account if you have Chrome sync enabled.</li>
+    <li><strong>Your download list</strong> — file names, sizes, progress and
+      source addresses of downloads you started. Kept locally on the device.</li>
+    <li><strong>Parts of a file being downloaded</strong> — held in the
+      browser's private storage until the finished file is written to disk,
+      then deleted.</li>
+  </ul>
+  <p>None of this leaves your device. There is no account, no analytics, no
+     telemetry, no crash reporting and no third-party service of any kind.</p>
+
+  <h2>What the extension looks at</h2>
+
+  <h3>Network requests on pages you visit</h3>
+  <p>
+    To offer a video for download, the extension needs to notice that a page is
+    playing one. It watches the addresses and content types of requests made by
+    pages you visit, in memory, to spot media. It does not read page content,
+    form input, or anything you type. What it finds is listed in the popup for
+    that tab and is discarded when you navigate away, after ten minutes, or when
+    you clear the list.
+  </p>
+
+  <h3>Downloads</h3>
+  <p>
+    When a download is taken over, the file is fetched directly from the site
+    hosting it to your browser. The request carries the cookies and referrer
+    your browser would normally send, so files behind a login work as expected.
+    Nothing is proxied through us; we never see the file or the address.
+  </p>
+
+  <h3>Copied links (off by default)</h3>
+  <p>
+    If you switch on <em>Watch copied links</em>, the extension notices when you
+    copy text on a page and, only when that text is a short http or https
+    address, offers it in the popup as something you might want to download.
+    Anything else you copy is ignored and never leaves the page. The setting is
+    off unless you turn it on, and the suggestion is kept in memory only.
+  </p>
+
+  <h2>Permissions, and why each is needed</h2>
+  <ul>
+    <li><code>downloads</code> — to take a download over from Chrome and to
+      save the finished file. This is the only way an extension can write a
+      file to disk.</li>
+    <li><code>storage</code>, <code>unlimitedStorage</code> — to keep your
+      settings and to hold the parts of a large file while it downloads.</li>
+    <li><code>offscreen</code> — the download engine runs in a hidden document,
+      because a service worker is stopped after a few seconds of inactivity.</li>
+    <li><code>scripting</code> — to show the "download this with…" card inside
+      the page you are on.</li>
+    <li><code>webRequest</code> — to notice media on the page, as described
+      above. It only observes; it never blocks or alters your browsing.</li>
+    <li><code>tabs</code> — to know which tab a download belongs to and to name
+      a stream after the page it came from.</li>
+    <li><code>contextMenus</code> — for the right-click "download with" entry.</li>
+    <li><code>declarativeNetRequestWithHostAccess</code> — to set the referrer
+      on the extension's own download requests, which some servers require.</li>
+    <li><strong>Access to all sites</strong> — a download can come from any
+      site, so the extension cannot know in advance which ones it will need.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>The extension is not directed at children and collects no personal
+     information from anyone.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the date at the top changes with it.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy: <a href="mailto:info@turbointernet.com">info@turbointernet.com</a></p>
+
+  <footer>
+    <a href="index.html">&larr; Turbo Internet Download Manager</a>
+  </footer>
+
+</div>
+</body>
+</html>
