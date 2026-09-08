@@ -1,4 +1,4 @@
-import { MSG, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
+import { KIND, MSG, STATUS, TERMINAL_STATUSES } from '../shared/constants.js';
 import { applyI18n, initI18n, t } from '../shared/i18n.js';
 import { formatBytes, formatEta, formatSpeed, percent } from '../shared/format.js';
 import { extensionOf } from '../shared/filetypes.js';
@@ -320,7 +320,7 @@ function infoParts(task) {
     parts.push(sum);
   }
   if (task.warning === 'awaiting-confirmation') add(t('warning.awaitingConfirmation'), 'warn');
-  if (task.status === STATUS.ERROR && task.error) add(describeError(task.error), 'err');
+  if (task.status === STATUS.ERROR && task.error) add(describeError(task), 'err');
 
   return parts;
 }
@@ -344,8 +344,22 @@ const ERROR_TEXT = new Map([
   ['HTTP 410', 'error.notFound'],
 ]);
 
-function describeError(error) {
-  const text = String(error);
+/**
+ * A stream URL that has stopped resolving has expired, not vanished.
+ *
+ * Signed CDN links are rotated every few minutes, so "the server no longer has
+ * this file" reads as a broken extension when the honest answer is that the
+ * link went stale and the page needs reloading.
+ */
+function isExpiredLink(task) {
+  if (task.kind !== KIND.HLS) return false;
+  const text = String(task.error || '');
+  return text.includes('HTTP 404') || text.includes('HTTP 410');
+}
+
+function describeError(task) {
+  if (isExpiredLink(task)) return t('error.linkExpired');
+  const text = String(task.error);
   for (const [code, key] of ERROR_TEXT) {
     if (text.includes(code)) return t(key);
   }
@@ -434,7 +448,9 @@ function actions(task) {
   // is in: states like "finalising" used to offer nothing but Remove, which
   // left a stuck download with no way to cancel it.
   if (TERMINAL_STATUSES.has(task.status)) {
-    if (task.status === STATUS.ERROR) add('action.retry', MSG.RETRY, true);
+    // Retrying an expired link only fails again on the same URL. Re-download
+    // is the button that can actually help, so it is the one left standing.
+    if (task.status === STATUS.ERROR && !isExpiredLink(task)) add('action.retry', MSG.RETRY, true);
     if (task.status === STATUS.COMPLETED) add('action.showFile', MSG.SHOW_FILE, true);
     addCopyLink(buttons, task);
     addRedownload(buttons, task);
@@ -467,7 +483,7 @@ function addRedownload(buttons, task) {
   button.textContent = t('action.redownload');
   button.addEventListener('click', async () => {
     button.disabled = true;
-    await send(MSG.DOWNLOAD_URL, { url: task.url, name: task.filename, kind: task.kind });
+    await send(MSG.REDOWNLOAD, { id: task.id });
   });
   buttons.push(button);
 }

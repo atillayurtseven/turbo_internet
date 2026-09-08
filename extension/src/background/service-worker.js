@@ -3,7 +3,7 @@ import { loadSettings, onSettingsChanged } from '../shared/settings.js';
 import { joinPath, sanitizeFilename } from '../shared/filetypes.js';
 import { initI18n, t } from '../shared/i18n.js';
 import { matchRule } from './rules.js';
-import { clearMedia, mediaFor, registerMediaSniffer } from './media.js';
+import { clearMedia, freshSourceFor, mediaFor, registerMediaSniffer } from './media.js';
 import { clearReferer, setReferer } from './referer.js';
 import { CHOICE_MANAGER, askAboutMedia } from './prompt.js';
 import { registerInterceptor } from './interceptor.js';
@@ -241,6 +241,29 @@ async function startManual({ url, name, kind, referrer = '', title = '' }) {
 }
 
 /**
+ * Starts a finished or failed task over, on a URL that still works.
+ *
+ * Replaying the stored URL is what a person expects for an ordinary file and
+ * exactly the wrong thing for a signed stream link, which is dead within
+ * minutes. The tab's current media list is consulted first, so a stream comes
+ * back from wherever the player is fetching it now.
+ */
+async function redownload(id) {
+  await ready;
+  const task = state.getTasks().find((item) => item.id === id);
+  if (!task) return null;
+
+  let { url, referrer } = task;
+  const fresh = freshSourceFor(task);
+  if (fresh) {
+    url = fresh.url;
+    const page = await pageInfo(fresh.tabId);
+    if (page.url) referrer = page.url;
+  }
+  return startManual({ url, name: task.filename, kind: task.kind, referrer });
+}
+
+/**
  * Names a stream after the page it plays on.
  *
  * A stream's URL says nothing useful -- "master", "index", or a template token
@@ -399,6 +422,10 @@ async function handleMessage(message, sender) {
       await startManual({ referrer: pageOf(tab), title: tab?.title ?? '', ...(payload ?? {}) });
       return { ok: true };
     }
+
+    case MSG.REDOWNLOAD:
+      await redownload(payload?.id);
+      return { ok: true };
 
     case MSG.CLEAR_COMPLETED:
       await state.clearCompleted(payload?.all === true);

@@ -249,3 +249,49 @@ function nameFor(url) {
     return '';
   }
 }
+
+/**
+ * A live URL for a stream whose stored one has expired.
+ *
+ * These CDNs sign their links: the path stays put while the query token, and
+ * often the host node too, is rotated every few minutes. A URL captured when
+ * the page loaded therefore answers 404 by the time the user retries. Whatever
+ * the tab is playing right now is the same stream, so it is looked up afresh
+ * rather than replayed from the task.
+ */
+export function freshSourceFor({ url, kind }) {
+  const want = partsOf(url);
+  if (!want) return null;
+
+  const now = Date.now();
+  let best = null;
+  for (const [tabId, list] of perTab) {
+    for (const item of list.values()) {
+      if (now - item.at > TTL_MS) continue;
+      if (kind && item.kind !== kind) continue;
+      const score = sameStream(want, partsOf(item.url));
+      if (score && (!best || score > best.score)) best = { score, url: item.url, tabId };
+    }
+  }
+  return best;
+}
+
+function partsOf(url) {
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    return { host: parsed.hostname, path: parsed.pathname, last: segments.pop() || '' };
+  } catch {
+    return null;
+  }
+}
+
+// Strongest evidence first: the same path on the same host is certainly the
+// same stream, a bare filename match is only probably one.
+function sameStream(a, b) {
+  if (!b) return 0;
+  if (a.host === b.host && a.path === b.path) return 3;
+  if (a.path === b.path) return 2;
+  if (a.last && a.last === b.last) return 1;
+  return 0;
+}

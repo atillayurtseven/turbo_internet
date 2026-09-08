@@ -14,6 +14,7 @@ export const MSG = {
   CLEAR_MEDIA: 'clear-media',
   DOWNLOAD_MEDIA: 'download-media',
   DOWNLOAD_URL: 'download-url',
+  REDOWNLOAD: 'redownload',
   CLIPBOARD_HIT: 'clipboard-hit',
   GET_CLIPBOARD: 'get-clipboard',
   CLEAR_CLIPBOARD: 'clear-clipboard',
