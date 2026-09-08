@@ -144,18 +144,12 @@ async function readClipboard() {
   // looking at whatever the user last copied, which may be a password.
   if (settings && settings.clipboardWatch === false) return null;
 
+  // Only links copied on a page are offered. Reading the whole system
+  // clipboard needed a permission of its own, and asking for it to catch the
+  // rarer case -- a link copied from another application -- is a poor trade.
   const answer = await send(MSG.GET_CLIPBOARD);
   const ignored = new Set(answer?.ignored ?? []);
   const stored = answer?.clipboard ?? null;
-
-  try {
-    const text = (await navigator.clipboard.readText()).trim();
-    if (/^https?:\/\/\S+$/i.test(text) && !ignored.has(text)) {
-      return { url: text, name: nameOf(text), label: 'URL', kind: kindOf(text), clipboard: true };
-    }
-  } catch {
-    // No clipboard permission or no focus; the copy listener still provides one.
-  }
 
   if (!stored || ignored.has(stored.url)) return null;
   return {

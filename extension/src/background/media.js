@@ -59,12 +59,13 @@ export function registerMediaSniffer(onChange) {
   );
 
   // A new page starts a new list; stale entries would offer dead URLs.
-  chrome.webNavigation?.onCommitted.addListener((details) => {
-    if (details.frameId === 0) {
-      perTab.delete(details.tabId);
-      streaming.delete(details.tabId);
-      onChange(details.tabId);
-    }
+  // tabs.onUpdated is used rather than webNavigation: it answers the same
+  // question and costs one permission fewer.
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (!changeInfo.url) return;
+    perTab.delete(tabId);
+    streaming.delete(tabId);
+    onChange(tabId);
   });
   chrome.tabs.onRemoved.addListener((tabId) => {
     perTab.delete(tabId);

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "__MSG_extDesc__",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -12,9 +12,7 @@
     "contextMenus",
     "scripting",
     "webRequest",
-    "webNavigation",
     "tabs",
-    "clipboardRead",
     "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
@@ -65,5 +63,6 @@
       "run_at": "document_idle",
       "all_frames": false
     }
-  ]
+  ],
+  "homepage_url": "https://turbointernet.com"
 }

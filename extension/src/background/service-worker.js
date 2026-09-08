@@ -140,10 +140,10 @@ const offered = new Set();
 const prompting = new Set();
 const offeredTabs = new Set();
 
-chrome.webNavigation?.onCommitted.addListener((details) => {
-  if (details.frameId !== 0) return;
-  offeredTabs.delete(details.tabId);
-  prompting.delete(details.tabId);
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (!changeInfo.url) return;
+  offeredTabs.delete(tabId);
+  prompting.delete(tabId);
 });
 
 /**

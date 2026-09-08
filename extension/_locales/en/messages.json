@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "Turbo Downloader"
+    "message": "Turbo Internet Download Manager"
   },
   "extDesc": {
     "message": "A rule-based download manager with file-type detection and multi-connection segmented downloads."
