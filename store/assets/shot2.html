@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="options.css">
+<link rel="stylesheet" href="dark.css">
+<style>
+html{margin:0}
+body{margin:0!important;width:1280px!important;height:800px!important;overflow:hidden!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;
+  justify-content:center!important;gap:34px;
+  background:linear-gradient(135deg,#0d1220 0%,#161a2b 55%,#1d1533 100%)!important;
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e6e9ef}
+.head{text-align:center;max-width:760px}
+.head h1{font-size:34px;margin:0 0 10px;letter-spacing:-.02em}
+.head p{font-size:17px;color:#9aa3b2;margin:0}
+.frame{width:1000px;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:26px 30px;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.frame h2{margin:0 0 4px;font-size:15px}
+.frame .hint{margin:0 0 18px}
+input[type=text],input[type=number],select{pointer-events:none}
+</style></head><body>
+<div class="head">
+  <h1>You decide what it takes over</h1>
+  <p>A rule per file type: how many connections, the size below which Chrome keeps it, where it lands.</p>
+</div>
+<div class="frame">
+  <h2>Per-type download rules</h2>
+  <p class="hint">The first matching rule wins. Downloads that match no rule are left to Chrome.</p>
+  <table>
+    <colgroup><col class="c-match"><col class="c-capture"><col class="c-parts">
+      <col class="c-size"><col class="c-folder"><col class="c-actions"></colgroup>
+    <thead><tr><th>Extensions / MIME</th><th>Capture</th><th>Connections</th>
+      <th>Min. size</th><th>Subfolder</th><th></th></tr></thead>
+    <tbody>
+      <tr><td><input type="text" class="exts" value=".iso .img .dmg .vhd .vmdk"><input type="text" class="mimes" value="application/x-iso9660-image"></td>
+        <td><button class="switch" role="switch" aria-checked="true"></button></td>
+        <td class="narrow"><input type="number" value="8"></td>
+        <td class="narrow"><input type="number" value="20"><span class="unit">MB</span></td>
+        <td><input type="text" value="ISO"></td><td><button>Remove</button></td></tr>
+      <tr><td><input type="text" class="exts" value=".zip .rar .7z .tar.gz"><input type="text" class="mimes" value="application/zip"></td>
+        <td><button class="switch" role="switch" aria-checked="true"></button></td>
+        <td class="narrow"><input type="number" value="4"></td>
+        <td class="narrow"><input type="number" value="10"><span class="unit">MB</span></td>
+        <td><input type="text" value="Archives"></td><td><button>Remove</button></td></tr>
+      <tr><td><input type="text" class="exts" value=".mp4 .mkv .mov .webm"><input type="text" class="mimes" value="video/*"></td>
+        <td><button class="switch" role="switch" aria-checked="true"></button></td>
+        <td class="narrow"><input type="number" value="6"></td>
+        <td class="narrow"><input type="number" value="5"><span class="unit">MB</span></td>
+        <td><input type="text" value="Video"></td><td><button>Remove</button></td></tr>
+      <tr><td><input type="text" class="exts" value=".exe .msi .deb .pkg"><input type="text" class="mimes" value=""></td>
+        <td><button class="switch" role="switch" aria-checked="true"></button></td>
+        <td class="narrow"><input type="number" value="4"></td>
+        <td class="narrow"><input type="number" value="2"><span class="unit">MB</span></td>
+        <td><input type="text" value="Installers"></td><td><button>Remove</button></td></tr>
+      <tr><td><input type="text" class="exts" value=".pdf .docx .xlsx"><input type="text" class="mimes" value=""></td>
+        <td><button class="switch" role="switch" aria-checked="false"></button></td>
+        <td class="narrow"><input type="number" value="1"></td>
+        <td class="narrow"><input type="number" value="0"><span class="unit">MB</span></td>
+        <td><input type="text" value=""></td><td><button>Remove</button></td></tr>
+    </tbody>
+  </table>
+</div>
+</body></html>

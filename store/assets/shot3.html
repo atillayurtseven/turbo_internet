@@ -1,0 +1,58 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html{margin:0}
+body{margin:0;width:1280px;height:800px;overflow:hidden;position:relative;
+ background:linear-gradient(135deg,#0d1220 0%,#161a2b 55%,#1d1533 100%);
+ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e6e9ef;
+ display:flex;flex-direction:column;align-items:center;gap:28px;padding-top:56px;box-sizing:border-box}
+h1{font-size:34px;margin:0;letter-spacing:-.02em}
+.sub{font-size:17px;color:#9aa3b2;margin:0;max-width:720px;text-align:center}
+.win{width:1060px;height:520px;border-radius:14px;overflow:hidden;position:relative;
+ border:1px solid #2a2f3a;box-shadow:0 30px 80px rgba(0,0,0,.55);background:#fff}
+.bar{height:40px;background:#e8eaed;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid #d5d8dc}
+.dot{width:11px;height:11px;border-radius:50%}
+.url{flex:1;height:24px;background:#fff;border-radius:12px;margin-left:10px;
+ font-size:12px;color:#5f6368;display:flex;align-items:center;padding:0 12px}
+.page{padding:44px 56px;background:#fff;color:#202124;height:100%;box-sizing:border-box}
+.page h2{margin:0 0 6px;font-size:26px;color:#111}
+.page p{color:#5f6368;font-size:14px;margin:0 0 26px}
+.dl{display:inline-flex;align-items:center;gap:9px;background:#1a73e8;color:#fff;
+ padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600}
+.rows{margin-top:34px;max-width:520px}
+.row{height:11px;background:#eceef1;border-radius:6px;margin-bottom:12px}
+.row:nth-child(2){width:82%}.row:nth-child(3){width:64%}.row:nth-child(4){width:74%}
+.card{position:absolute;top:58px;right:18px;width:330px;background:#171a21;color:#e6e9ef;
+ border:1px solid #2a2f3a;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.5);
+ padding:15px 16px;font-size:13px}
+.ctop{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.ctop img{width:22px;height:22px}
+.ctop b{font-size:13px}
+.fn{font-size:13px;font-weight:600;word-break:break-all;margin-bottom:3px}
+.meta{color:#9aa3b2;font-size:12px;margin-bottom:14px}
+.btns{display:flex;gap:8px}
+.btns button{flex:1;border-radius:8px;padding:8px 0;font-size:12.5px;font-weight:600;border:1px solid #2a2f3a;
+ background:#1e222b;color:#e6e9ef}
+.btns .go{background:#1b2740;border-color:#33507e;color:#9dc0ff}
+</style></head><body>
+<h1>It asks first, every time</h1>
+<p class="sub">Say no and Chrome's own download carries on untouched. Nothing is taken over behind your back.</p>
+<div class="win">
+  <div class="bar">
+    <span class="dot" style="background:#ff5f57"></span>
+    <span class="dot" style="background:#febc2e"></span>
+    <span class="dot" style="background:#28c840"></span>
+    <div class="url">releases.example.org/downloads</div>
+  </div>
+  <div class="page">
+    <h2>Ubuntu 26.04.1 LTS</h2>
+    <p>Desktop image, 64-bit</p>
+    <span class="dl">Download 6.2 GB</span>
+    <div class="rows"><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div></div>
+  </div>
+  <div class="card">
+    <div class="ctop"><img src="icon128.png"><b>Turbo Internet Download Manager</b></div>
+    <div class="fn">ubuntu-26.04.1-desktop-amd64.iso</div>
+    <div class="meta">6.20 GB &middot; 8 connections &middot; server supports ranges</div>
+    <div class="btns"><button>No, let Chrome</button><button class="go">Download with Turbo</button></div>
+  </div>
+</div>
+</body></html>
