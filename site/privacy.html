@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Privacy Policy — Turbo Internet Download Manager</title>
+<title>Privacy Policy for Turbo Internet Download Manager</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -18,20 +18,21 @@
   </header>
 
   <p class="lead">
-    This extension collects nothing, sends nothing anywhere, and has no server
-    behind it. Everything it does happens inside your own browser.
+    This extension collects nothing and sends nothing anywhere. There is no
+    server behind it. Everything it does happens inside your own browser.
   </p>
 
-  <h2>What is stored, and where</h2>
+  <h2>What is stored and where</h2>
   <ul>
-    <li><strong>Your settings</strong> — rules, connection counts, language and
-      similar preferences. Kept in Chrome's own extension storage, which syncs
-      through your Google account if you have Chrome sync enabled.</li>
-    <li><strong>Your download list</strong> — file names, sizes, progress and
-      source addresses of downloads you started. Kept locally on the device.</li>
-    <li><strong>Parts of a file being downloaded</strong> — held in the
-      browser's private storage until the finished file is written to disk,
-      then deleted.</li>
+    <li><strong>Your settings:</strong> rules, connection counts, language and
+      similar preferences. These live in Chrome's own extension storage. That
+      storage syncs through your Google account if you have Chrome sync
+      enabled.</li>
+    <li><strong>Your download list:</strong> file names, sizes, progress and
+      source addresses of downloads you started. These stay on the device.</li>
+    <li><strong>Parts of a file being downloaded:</strong> held in the
+      browser's private storage until the finished file reaches the disk. They
+      are deleted afterwards.</li>
   </ul>
   <p>None of this leaves your device. There is no account, no analytics, no
      telemetry, no crash reporting and no third-party service of any kind.</p>
@@ -43,8 +44,8 @@
     To offer a video for download, the extension needs to notice that a page is
     playing one. It watches the addresses and content types of requests made by
     pages you visit, in memory, to spot media. It does not read page content,
-    form input, or anything you type. What it finds is listed in the popup for
-    that tab and is discarded when you navigate away, after ten minutes, or when
+    form input or anything you type. What it finds is listed in the popup for
+    that tab. It is discarded when you navigate away, after ten minutes or when
     you clear the list.
   </p>
 
@@ -52,8 +53,9 @@
   <p>
     When a download is taken over, the file is fetched directly from the site
     hosting it to your browser. The request carries the cookies and referrer
-    your browser would normally send, so files behind a login work as expected.
-    Nothing is proxied through us; we never see the file or the address.
+    your browser would normally send. Files behind a login therefore work as
+    expected. Nothing is proxied through us; we never see the file or the
+    address.
   </p>
 
   <h3>Copied links (off by default)</h3>
@@ -62,29 +64,29 @@
     copy text on a page and, only when that text is a short http or https
     address, offers it in the popup as something you might want to download.
     Anything else you copy is ignored and never leaves the page. The setting is
-    off unless you turn it on, and the suggestion is kept in memory only.
+    off unless you turn it on. The suggestion is kept in memory only.
   </p>
 
-  <h2>Permissions, and why each is needed</h2>
+  <h2>Permissions and why each is needed</h2>
   <ul>
-    <li><code>downloads</code> — to take a download over from Chrome and to
+    <li><code>downloads</code>: to take a download over from Chrome and to
       save the finished file. This is the only way an extension can write a
       file to disk.</li>
-    <li><code>storage</code>, <code>unlimitedStorage</code> — to keep your
+    <li><code>storage</code> and <code>unlimitedStorage</code>: to keep your
       settings and to hold the parts of a large file while it downloads.</li>
-    <li><code>offscreen</code> — the download engine runs in a hidden document,
+    <li><code>offscreen</code>: the download engine runs in a hidden document
       because a service worker is stopped after a few seconds of inactivity.</li>
-    <li><code>scripting</code> — to show the "download this with…" card inside
+    <li><code>scripting</code>: to show the "download this with…" card inside
       the page you are on.</li>
-    <li><code>webRequest</code> — to notice media on the page, as described
+    <li><code>webRequest</code>: to notice media on the page, as described
       above. It only observes; it never blocks or alters your browsing.</li>
-    <li><code>tabs</code> — to know which tab a download belongs to and to name
+    <li><code>tabs</code>: to know which tab a download belongs to and to name
       a stream after the page it came from.</li>
-    <li><code>contextMenus</code> — for the right-click "download with" entry.</li>
-    <li><code>declarativeNetRequestWithHostAccess</code> — to set the referrer
-      on the extension's own download requests, which some servers require.</li>
-    <li><strong>Access to all sites</strong> — a download can come from any
-      site, so the extension cannot know in advance which ones it will need.</li>
+    <li><code>contextMenus</code>: for the right-click "download with" entry.</li>
+    <li><code>declarativeNetRequestWithHostAccess</code>: to set the referrer
+      on the extension's own download requests. Some servers require it.</li>
+    <li><strong>Access to all sites:</strong> a download can come from any
+      site. The extension cannot know in advance which ones it will need.</li>
   </ul>
 
   <h2>Children</h2>
