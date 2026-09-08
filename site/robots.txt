@@ -1,0 +1,14 @@
+# https://turbointernet.com/robots.txt
+# Every crawler, AI crawlers included, is welcome. The wildcard below already
+# covers GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, Google-Extended,
+# CCBot and the rest; naming them individually would grant nothing extra and
+# would rot as vendors rename their agents.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://turbointernet.com/sitemap.xml
+
+# Plain-text summaries for agents:
+#   https://turbointernet.com/llms.txt
+#   https://turbointernet.com/llms-full.txt

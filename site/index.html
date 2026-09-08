@@ -3,54 +3,311 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Turbo Internet Download Manager</title>
-<meta name="description" content="A Chrome extension that downloads a file over several connections at once, resumes where it left off and verifies what it saved." />
+<title>Turbo Internet Download Manager – Parallel Downloads for Chrome</title>
+<meta name="description" content="Turbo Internet Download Manager is a free Chrome extension that splits a download across up to 32 connections, resumes broken transfers and verifies every part. macOS, Windows, Linux and ChromeOS." />
+<link rel="canonical" href="https://turbointernet.com/" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Turbo Internet Download Manager" />
+<meta property="og:title" content="Turbo Internet Download Manager – Parallel Downloads for Chrome" />
+<meta property="og:description" content="Turbo Internet Download Manager is a free Chrome extension that splits a download across up to 32 connections, resumes broken transfers and verifies every part. macOS, Windows, Linux and ChromeOS." />
+<meta property="og:url" content="https://turbointernet.com/" />
+<meta property="og:image" content="https://turbointernet.com/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Turbo Internet Download Manager splitting a large file across six parallel connections in Chrome." />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<meta name="theme-color" content="#5b9bff" />
+<link rel="alternate" type="text/plain" title="llms.txt" href="/llms.txt" />
 <link rel="stylesheet" href="style.css" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://turbointernet.com/#publisher",
+      "name": "TurboInternet",
+      "url": "https://turbointernet.com/",
+      "email": "info@turbointernet.com",
+      "logo": "https://turbointernet.com/icon-512.png"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://turbointernet.com/#website",
+      "url": "https://turbointernet.com/",
+      "name": "Turbo Internet Download Manager",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://turbointernet.com/#publisher"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://turbointernet.com/#app",
+      "name": "Turbo Internet Download Manager",
+      "alternateName": "Turbo Download Manager",
+      "url": "https://turbointernet.com/",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Download Manager",
+      "operatingSystem": "macOS, Windows, Linux, ChromeOS",
+      "browserRequirements": "Google Chrome 116 or later",
+      "softwareVersion": "1.0.0",
+      "isAccessibleForFree": true,
+      "inLanguage": [
+        "en",
+        "tr"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "publisher": {
+        "@id": "https://turbointernet.com/#publisher"
+      },
+      "privacyPolicy": "https://turbointernet.com/privacy",
+      "featureList": [
+        "Parallel segmented downloading over up to 32 connections",
+        "Work stealing between connections",
+        "Per-file-type rules for connection count, minimum size and destination subfolder",
+        "Pause, resume and speed cap",
+        "Resume over HTTP Range with If-Range validation",
+        "HLS download and remux to plain seekable MP4 without re-encoding",
+        "Per-part size verification and optional SHA-256"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://turbointernet.com/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is there an internet download manager for Mac?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager runs on macOS. It is a Chrome extension, so it runs wherever Chrome 116 or later runs — macOS, Windows, Linux and ChromeOS — with no platform-specific build and no companion application to install. This is worth stating because the better-known product with a similar name, Internet Download Manager (IDM) by Tonec, is a Windows-only desktop application and is unrelated to this project."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is it different from Internet Download Manager (IDM) by Tonec?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager is an unrelated project that happens to share part of a name. IDM by Tonec is a paid Windows-only desktop application that reaches the browser through a companion integration plugin. Turbo Internet Download Manager is a free Chrome extension: there is no desktop application, no companion plugin, and it runs on macOS, Windows, Linux and ChromeOS alike."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager is free. There is no paid tier, no trial period, no licence key and no account to create."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it need a companion or helper application?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Turbo Internet Download Manager is a single Chrome extension. It hooks Chrome's own download event and does its fetching inside the browser, so there is nothing installed alongside Chrome and nothing left running once the browser is closed."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it actually make downloads faster?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager makes a download faster when a single connection is the bottleneck, which is common on servers that throttle per connection and on long-distance links where latency limits throughput. It does nothing when your own line is already saturated, and nothing when the server refuses ranged requests, in which case the download falls back to a single connection."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How many connections does it use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager splits a file into parts and fetches each on its own connection, up to 32 parts, with the count configurable per file type. A connection that finishes early takes over half of whichever part has the most left to do, so the tail of a download does not wait on one slow part. Splitting stops when under 2 MB remains, and a part already 90 percent done is left alone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can it resume a broken download?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager resumes a broken download wherever the server supports ranged requests. Each part retries on its own with exponential backoff, and every part request carries If-Range with the file's ETag or Last-Modified, so a file cannot be stitched together from two different builds. On a server that ignores Range, resuming restarts the download."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work with files behind a login?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Turbo Internet Download Manager carries the browser's own cookies, so anything you can reach while signed in downloads normally. Referer is set through a declarative session rule rather than through fetch, which cannot set it, so hotlink-protected servers that answer 403 without a referrer work as well."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can it download videos from a website?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager downloads HLS streams that a page actually loads, including TS and fragmented MP4 segments, EXT-X-MAP, EXT-X-BYTERANGE and AES-128 transport encryption. TS streams are converted to a plain, seekable MP4 with a real sample table, so ordinary desktop players open them. Nothing is re-encoded. SAMPLE-AES and anything Widevine-backed are refused."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work with YouTube?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, deliberately. YouTube and comparable platforms are out of scope for Turbo Internet Download Manager, because downloading from them breaks their terms of service and Chrome Web Store policy forbids extensions that do it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it safe, and what data does it collect?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager collects no data and sends nothing to its publisher. There is no backend service to send anything to. Files travel straight from the origin server to your disk, and are never proxied through anyone else."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does it need access to every site?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "To download a file Turbo Internet Download Manager has to be able to fetch from the site the file is on, which is any site you download from. The same access lets it notice HLS playlists a page loads. Nothing else is read from pages, and the clipboard features that watch for copied links can both be switched off."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I limit the download speed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Turbo Internet Download Manager has a speed cap, alongside pause and resume, so a large download does not have to take the whole line."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Where do downloaded files go?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager saves into Chrome's own download folder, and each file-type rule can name a subfolder underneath it, so disk images, archives, video and installers can be separated without sorting them by hand."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why did my download stop at 1 GB?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "That is the single-connection cap. When a server ignores ranged requests, Turbo Internet Download Manager falls back to one connection, and a single-connection download is capped at 1 GB."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much free disk space does a large download need?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "About twice the size of the file. Turbo Internet Download Manager holds the parts in browser storage until the finished file reaches disk, so a 6 GB download temporarily needs roughly 12 GB free."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why is it not taking over my downloads?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Most often the minimum size. By default disk images under 20 MB, archives under 10 MB, video under 5 MB and installers under 2 MB are left to Chrome. The rule for that file type may also be switched off, or the server may not be offering ranged requests. The service worker console logs the reason."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it support torrents or FTP?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Turbo Internet Download Manager handles HTTP and HTTPS downloads and HLS streams. There is no BitTorrent support, no FTP support, no scheduler and no queue that survives a browser restart. A standalone desktop download manager is the better fit if you need those."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work in Firefox, Edge, Safari or Brave?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager is built for Chrome and tested there. Edge, Brave and other Chromium browsers use the same extension platform and should run it, though they are not tested. Firefox and Safari use different extension APIs and are not supported."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I install it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A Chrome Web Store listing is on the way. Until then it loads from source: open chrome://extensions, turn on Developer mode, choose Load unpacked and select the extension folder. Chrome 116 or later is required."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What languages does it speak?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Turbo Internet Download Manager ships in English and Turkish. Adding a language means one JSON file of strings, with no code changes."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
 <nav>
-  <div class="mark"></div>
-  <b>Turbo Internet</b>
+  <a class="brand" href="/"><span class="mark" aria-hidden="true"></span><b>Turbo Internet</b></a>
   <div class="spacer"></div>
+  <a href="#faq">FAQ</a>
   <a href="/privacy">Privacy</a>
 </nav>
 
-<section class="hero">
-  <h1>One file.<br /><span>Every connection at once.</span></h1>
-  <p>
-    A Chrome extension that splits a download across several connections,
-    resumes where it left off and verifies what it saved.
+<main>
+
+<section class="hero" aria-labelledby="top">
+  <h1 id="top">Turbo Internet Download Manager</h1>
+  <p class="tagline">One file. Several connections at once.</p>
+  <p class="lead">
+    A free Chrome extension that splits a download across up to 32 connections,
+    resumes where it left off and verifies what it saved. It runs wherever
+    Chrome 116 or later runs &mdash; macOS, Windows, Linux and ChromeOS.
   </p>
 
   <div class="cta">
-    <a class="btn primary" href="#install">Install</a>
-    <a class="btn ghost" href="/privacy">Privacy policy</a>
+    <a class="btn primary" href="#install">How to install</a>
+    <a class="btn ghost" href="#faq">Read the FAQ</a>
   </div>
-  <small>Chrome 116 and later &middot; free &middot; no account</small>
+  <p class="meta">Chrome 116 and later &middot; free &middot; no account</p>
 
-  <div class="demo">
-    <div class="file"><b>ubuntu-24.04.iso</b> <i>3.2 GB</i></div>
+  <div class="demo" aria-hidden="true">
+    <div class="file"><b>ubuntu-24.04.iso</b> <i>6 GB</i></div>
     <div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="legend"><span>6 connections</span><span>work stealing on</span></div>
   </div>
 </section>
 
-<section class="features">
+<section class="features" aria-labelledby="what">
+  <h2 id="what" class="grid-head">What it does</h2>
   <div class="feat">
-    <h3>Parallel by default</h3>
+    <h3>Parallel downloads by default</h3>
     <p>Where the server allows ranged requests, the file is split and fetched
-       over several connections at once.</p>
+       over several connections at once, up to 32 parts.</p>
   </div>
   <div class="feat">
     <h3>Work stealing</h3>
     <p>A connection that finishes early takes over half of whichever part has
-       the most left to do.</p>
+       the most left to do, so one slow part cannot hold up the file.</p>
   </div>
   <div class="feat">
     <h3>Rules per file type</h3>
     <p>Choose which extensions are taken over, how many connections each gets,
-       a minimum size and a subfolder.</p>
+       a minimum size and a destination subfolder.</p>
   </div>
   <div class="feat">
     <h3>It asks first</h3>
@@ -58,28 +315,97 @@
        Chrome keeps the download.</p>
   </div>
   <div class="feat">
-    <h3>Streams to real MP4</h3>
-    <p>HLS playlists found on a page become a plain, seekable MP4. Nothing is
-       re-encoded.</p>
+    <h3>HLS streams to a real MP4</h3>
+    <p>Playlists found on a page become a plain, seekable MP4 with a real
+       sample table. Nothing is re-encoded.</p>
   </div>
   <div class="feat">
     <h3>Verified, not just finished</h3>
-    <p>Every part is size-checked before the file is assembled. SHA-256 is
-       there when you have a checksum to compare.</p>
+    <p>Every part is size-checked before the file is assembled, and SHA-256 is
+       there when you have a published checksum to compare.</p>
   </div>
 </section>
 
-<section class="section" id="install">
-  <h2>Install</h2>
+<section class="section wide" aria-labelledby="screens">
+  <h2 id="screens">What it looks like</h2>
+  <figure>
+    <img src="/shot-downloads.png" width="1280" height="800" loading="lazy" decoding="async"
+         alt="Turbo Internet Download Manager downloading a large ISO across parallel connections, with per-part progress bars." />
+    <figcaption>A download in progress, split across several connections.</figcaption>
+  </figure>
+  <figure>
+    <img src="/shot-prompt.png" width="1280" height="800" loading="lazy" decoding="async"
+         alt="The in-page card asking whether Turbo Internet Download Manager or Chrome should handle the download." />
+    <figcaption>It asks before taking a download over.</figcaption>
+  </figure>
+  <figure>
+    <img src="/shot-settings.png" width="1280" height="800" loading="lazy" decoding="async"
+         alt="Rules for disk images, archives, video and installers, each with its own connection count, minimum size and destination subfolder." />
+    <figcaption>Rules per file type.</figcaption>
+  </figure>
+</section>
+
+<section class="section" aria-labelledby="verification">
+  <h2 id="verification">Verification</h2>
+  <p>Driven through the Chrome DevTools Protocol against a local server.</p>
+  <ul>
+    <li>A 10&nbsp;GB download completed over 32 parts with work stealing active,
+        and the SHA-256 of the result matched the reference file.</li>
+    <li>A 6&nbsp;GB Ubuntu ISO completed with a SHA-256 matching the checksum
+        Ubuntu publishes.</li>
+    <li>Ten scenarios pass: ranged, no-range fallback, 1&nbsp;KB, zero bytes,
+        404, transient 500, pause, resume, cancel and duplicate suppression.</li>
+    <li>HLS: a 64-segment TS stream and a 101-segment fragmented-MP4 stream both
+        produced valid, seekable output.</li>
+    <li>A download a server refused with 403 when no <code>Referer</code> was
+        sent completed when one was.</li>
+  </ul>
+</section>
+
+<section class="section" aria-labelledby="limits">
+  <h2 id="limits">Limits</h2>
+  <ul>
+    <li>When a server ignores ranged requests the download falls back to a
+        single connection, and a single-connection download is capped at
+        1&nbsp;GB.</li>
+    <li>Resuming needs ranged requests. On a server that ignores
+        <code>Range</code>, resuming restarts the download.</li>
+    <li>Parts are held in browser storage until the finished file reaches disk,
+        so a 6&nbsp;GB download temporarily needs about 12&nbsp;GB free.</li>
+    <li>No scheduler, no queue that survives a browser restart, no FTP and no
+        BitTorrent.</li>
+    <li>YouTube and comparable platforms are out of scope.</li>
+  </ul>
+</section>
+
+<section class="section" aria-labelledby="idm">
+  <h2 id="idm">Not Internet Download Manager (IDM) by Tonec</h2>
+  <p>
+    Turbo Internet Download Manager is an unrelated project that happens to share part of a name.
+    IDM by Tonec is a paid, Windows-only desktop application that reaches the
+    browser through a companion integration plugin.
+  </p>
+  <p>
+    Turbo Internet Download Manager is a free Chrome extension. There is no desktop application and no
+    companion plugin, it runs on macOS, Windows, Linux and ChromeOS alike, and
+    downloads carry the session cookies of the tab you are already signed in
+    with. In exchange it has no scheduler, no persistent queue, and no FTP or
+    BitTorrent support.
+  </p>
+</section>
+
+<section class="section" id="install" aria-labelledby="install-h">
+  <h2 id="install-h">Install the download manager in Chrome</h2>
   <p>
     A Chrome Web Store listing is on the way. Until then the extension loads
     from source: open <code>chrome://extensions</code>, turn on Developer mode,
     choose <em>Load unpacked</em> and select the <code>extension</code> folder.
+    Chrome 116 or later is required.
   </p>
 </section>
 
-<section class="section">
-  <h2>What it will not do</h2>
+<section class="section" aria-labelledby="notdo">
+  <h2 id="notdo">What it will not download</h2>
   <p>
     YouTube and comparable platforms are out of scope. Downloading from them
     breaks their terms of service, and Chrome Web Store policy forbids
@@ -87,18 +413,118 @@
   </p>
 </section>
 
-<section class="section">
-  <h2>Privacy in one line</h2>
+<section class="section" id="faq" aria-labelledby="faq-h">
+  <h2 id="faq-h">Questions</h2>
+      <details class="qa">
+        <summary><h3>Is there an internet download manager for Mac?</h3></summary>
+        <p>Turbo Internet Download Manager runs on macOS. It is a Chrome extension, so it runs wherever Chrome 116 or later runs — macOS, Windows, Linux and ChromeOS — with no platform-specific build and no companion application to install. This is worth stating because the better-known product with a similar name, Internet Download Manager (IDM) by Tonec, is a Windows-only desktop application and is unrelated to this project.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>How is it different from Internet Download Manager (IDM) by Tonec?</h3></summary>
+        <p>Turbo Internet Download Manager is an unrelated project that happens to share part of a name. IDM by Tonec is a paid Windows-only desktop application that reaches the browser through a companion integration plugin. Turbo Internet Download Manager is a free Chrome extension: there is no desktop application, no companion plugin, and it runs on macOS, Windows, Linux and ChromeOS alike.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Is it free?</h3></summary>
+        <p>Turbo Internet Download Manager is free. There is no paid tier, no trial period, no licence key and no account to create.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Does it need a companion or helper application?</h3></summary>
+        <p>No. Turbo Internet Download Manager is a single Chrome extension. It hooks Chrome's own download event and does its fetching inside the browser, so there is nothing installed alongside Chrome and nothing left running once the browser is closed.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Does it actually make downloads faster?</h3></summary>
+        <p>Turbo Internet Download Manager makes a download faster when a single connection is the bottleneck, which is common on servers that throttle per connection and on long-distance links where latency limits throughput. It does nothing when your own line is already saturated, and nothing when the server refuses ranged requests, in which case the download falls back to a single connection.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>How many connections does it use?</h3></summary>
+        <p>Turbo Internet Download Manager splits a file into parts and fetches each on its own connection, up to 32 parts, with the count configurable per file type. A connection that finishes early takes over half of whichever part has the most left to do, so the tail of a download does not wait on one slow part. Splitting stops when under 2 MB remains, and a part already 90 percent done is left alone.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Can it resume a broken download?</h3></summary>
+        <p>Turbo Internet Download Manager resumes a broken download wherever the server supports ranged requests. Each part retries on its own with exponential backoff, and every part request carries If-Range with the file's ETag or Last-Modified, so a file cannot be stitched together from two different builds. On a server that ignores Range, resuming restarts the download.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Does it work with files behind a login?</h3></summary>
+        <p>Yes. Turbo Internet Download Manager carries the browser's own cookies, so anything you can reach while signed in downloads normally. Referer is set through a declarative session rule rather than through fetch, which cannot set it, so hotlink-protected servers that answer 403 without a referrer work as well.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Can it download videos from a website?</h3></summary>
+        <p>Turbo Internet Download Manager downloads HLS streams that a page actually loads, including TS and fragmented MP4 segments, EXT-X-MAP, EXT-X-BYTERANGE and AES-128 transport encryption. TS streams are converted to a plain, seekable MP4 with a real sample table, so ordinary desktop players open them. Nothing is re-encoded. SAMPLE-AES and anything Widevine-backed are refused.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Does it work with YouTube?</h3></summary>
+        <p>No, deliberately. YouTube and comparable platforms are out of scope for Turbo Internet Download Manager, because downloading from them breaks their terms of service and Chrome Web Store policy forbids extensions that do it.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Is it safe, and what data does it collect?</h3></summary>
+        <p>Turbo Internet Download Manager collects no data and sends nothing to its publisher. There is no backend service to send anything to. Files travel straight from the origin server to your disk, and are never proxied through anyone else.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Why does it need access to every site?</h3></summary>
+        <p>To download a file Turbo Internet Download Manager has to be able to fetch from the site the file is on, which is any site you download from. The same access lets it notice HLS playlists a page loads. Nothing else is read from pages, and the clipboard features that watch for copied links can both be switched off.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Can I limit the download speed?</h3></summary>
+        <p>Yes. Turbo Internet Download Manager has a speed cap, alongside pause and resume, so a large download does not have to take the whole line.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Where do downloaded files go?</h3></summary>
+        <p>Turbo Internet Download Manager saves into Chrome's own download folder, and each file-type rule can name a subfolder underneath it, so disk images, archives, video and installers can be separated without sorting them by hand.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Why did my download stop at 1 GB?</h3></summary>
+        <p>That is the single-connection cap. When a server ignores ranged requests, Turbo Internet Download Manager falls back to one connection, and a single-connection download is capped at 1 GB.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>How much free disk space does a large download need?</h3></summary>
+        <p>About twice the size of the file. Turbo Internet Download Manager holds the parts in browser storage until the finished file reaches disk, so a 6 GB download temporarily needs roughly 12 GB free.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Why is it not taking over my downloads?</h3></summary>
+        <p>Most often the minimum size. By default disk images under 20 MB, archives under 10 MB, video under 5 MB and installers under 2 MB are left to Chrome. The rule for that file type may also be switched off, or the server may not be offering ranged requests. The service worker console logs the reason.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Does it support torrents or FTP?</h3></summary>
+        <p>No. Turbo Internet Download Manager handles HTTP and HTTPS downloads and HLS streams. There is no BitTorrent support, no FTP support, no scheduler and no queue that survives a browser restart. A standalone desktop download manager is the better fit if you need those.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>Does it work in Firefox, Edge, Safari or Brave?</h3></summary>
+        <p>Turbo Internet Download Manager is built for Chrome and tested there. Edge, Brave and other Chromium browsers use the same extension platform and should run it, though they are not tested. Firefox and Safari use different extension APIs and are not supported.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>How do I install it?</h3></summary>
+        <p>A Chrome Web Store listing is on the way. Until then it loads from source: open chrome://extensions, turn on Developer mode, choose Load unpacked and select the extension folder. Chrome 116 or later is required.</p>
+      </details>
+      <details class="qa">
+        <summary><h3>What languages does it speak?</h3></summary>
+        <p>Turbo Internet Download Manager ships in English and Turkish. Adding a language means one JSON file of strings, with no code changes.</p>
+      </details>
+</section>
+
+<section class="section" aria-labelledby="privacy-h">
+  <h2 id="privacy-h">Privacy: nothing is collected</h2>
   <p>
-    Nothing is collected and nothing is sent to us. There is no server behind
-    this extension. <a href="/privacy">Read the full policy</a>.
+    Turbo Internet Download Manager collects no data and sends nothing to its publisher. There is no
+    backend service behind the extension; files travel straight from the origin
+    server to your disk. <a href="/privacy">Read the full policy</a>.
   </p>
 </section>
 
+</main>
+
 <footer>
-  <span>TurboInternet</span>
-  <span class="spacer"></span>
-  <a href="/privacy">Privacy</a>
+  <div class="frow">
+    <span>Turbo Internet Download Manager</span>
+    <span class="spacer"></span>
+    <a href="#faq">FAQ</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/llms.txt">llms.txt</a>
+  </div>
+  <p class="disclaimer">
+    Not affiliated with, endorsed by, or connected to Tonec Inc. or its product
+    Internet Download Manager (IDM). Product names are used only to describe and
+    compare.
+  </p>
 </footer>
 
 </body>

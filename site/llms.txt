@@ -1,0 +1,90 @@
+# Turbo Internet Download Manager
+
+> Turbo Internet Download Manager is a free Chrome extension (Manifest V3) that
+> takes over a browser download and fetches the file over up to 32 connections
+> at once, resumes where it left off, and verifies what it saved. It runs
+> wherever Chrome 116 or later runs: macOS, Windows, Linux and ChromeOS.
+
+Published by TurboInternet (info@turbointernet.com). Free: no paid tier, no
+trial period, no licence key, no account. Not yet listed on the Chrome Web
+Store; it currently loads unpacked from source.
+
+Turbo Internet Download Manager is unrelated to Internet Download Manager (IDM)
+by Tonec Inc., a paid Windows-only desktop application that reaches the browser
+through a companion integration plugin. This project is a Chrome extension with
+no desktop application and no companion plugin.
+
+## Docs
+
+- [Home](https://turbointernet.com/): what the extension does, screenshots, verification results, limits, and 21 answered questions.
+- [Questions](https://turbointernet.com/#faq): Mac support, price, speed, connections, resuming, logins, HLS, permissions, install, troubleshooting.
+- [Privacy policy](https://turbointernet.com/privacy): what is stored, what the extension observes, and the reason for each Chrome permission.
+
+## What it does
+
+- Parallel downloading: where the server answers ranged requests, the file is
+  split into parts and each part is fetched on its own connection, up to 32
+  parts, configurable per file type.
+- Work stealing: a connection that finishes early takes over half of whichever
+  part has the most left to do, so the tail of a download does not wait on one
+  slow part. Splitting stops under 2 MB remaining, and a part already 90 percent
+  done is left alone.
+- Rules per file type: which extensions are taken over, how many connections
+  each gets, a minimum size, and a destination subfolder.
+- Consent first: a card appears in the page before a download is taken over.
+  Declining leaves the download to Chrome.
+- Sessions: downloads carry the browser's own cookies, so a file behind a login
+  downloads normally. Referer is set through a declarative session rule, so
+  hotlink-protected servers that answer 403 without a referrer work as well.
+- HLS: playlists a page loads can be downloaded, including TS and fragmented
+  MP4 segments, EXT-X-MAP, EXT-X-BYTERANGE and AES-128 transport encryption. TS
+  streams are converted to a plain, seekable MP4 with a real sample table.
+  Nothing is re-encoded. SAMPLE-AES and Widevine-backed streams are refused.
+- Integrity: every part is size-checked before the file is assembled, every
+  part request carries If-Range with the file's ETag or Last-Modified, and
+  SHA-256 of the finished file is available for comparing against a published
+  checksum.
+- Pause, resume and a speed cap.
+
+It is built on Manifest V3, the extension platform Chrome now requires, and
+needs no native companion application installed alongside the browser.
+
+## Verification
+
+Driven through the Chrome DevTools Protocol against a local server.
+
+- A 10 GB download completed over 32 parts with work stealing active; the
+  SHA-256 of the result matched the reference file.
+- A 6 GB Ubuntu ISO completed with a SHA-256 matching the checksum Ubuntu
+  publishes.
+- Ten scenarios pass: ranged, no-range fallback, 1 KB, zero bytes, 404,
+  transient 500, pause, resume, cancel and duplicate suppression.
+- HLS: a 64-segment TS stream and a 101-segment fragmented-MP4 stream both
+  produced valid, seekable output.
+- A download a server refused with 403 when no Referer was sent completed when
+  one was.
+
+## Limits
+
+- When a server ignores ranged requests the download falls back to a single
+  connection, and a single-connection download is capped at 1 GB.
+- Resuming needs ranged requests. On a server that ignores Range, resuming
+  restarts the download.
+- Parts are held in browser storage until the finished file reaches disk, so a
+  6 GB download temporarily needs about 12 GB free.
+- No scheduler, no queue that survives a browser restart, no FTP, no BitTorrent.
+  A standalone desktop download manager is the better fit if you need those.
+- YouTube and comparable platforms are out of scope, because downloading from
+  them breaks their terms of service and Chrome Web Store policy forbids
+  extensions that do it.
+
+## Privacy
+
+Turbo Internet Download Manager collects no data and sends nothing to its
+publisher. There is no backend service. Files travel straight from the origin
+server to the user's disk and are never proxied through anyone else. The
+clipboard features that watch for copied links can both be switched off.
+
+## Optional
+
+- [llms-full.txt](https://turbointernet.com/llms-full.txt): every page on this site as one plain-text file.

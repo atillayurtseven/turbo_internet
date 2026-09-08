@@ -28,26 +28,31 @@ nav {
   max-width: 980px; margin: 0 auto; padding: 24px;
   display: flex; align-items: center; gap: 11px;
 }
-nav .mark { width: 28px; height: 28px; border-radius: 8px; }
+nav .mark { width: 28px; height: 28px; border-radius: 8px; display: block; }
+nav .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--txt); }
 nav b { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
 nav .spacer { flex: 1; }
 nav a { color: var(--dim); font-size: 14px; text-decoration: none; }
 nav a:hover { color: var(--txt); }
+nav .brand:hover b { color: var(--acc); }
 
 /* --- hero -------------------------------------------------------------- */
 .hero { max-width: 980px; margin: 0 auto; padding: 64px 24px 8px; text-align: center; }
 .hero h1 {
-  font-size: clamp(34px, 6vw, 52px); line-height: 1.08; margin: 0;
-  letter-spacing: -0.033em; font-weight: 700;
+  font-size: clamp(30px, 4.6vw, 42px); line-height: 1.1; margin: 0;
+  letter-spacing: -0.03em; font-weight: 700;
 }
-.hero h1 span {
+.hero .tagline {
+  margin: 10px auto 0; font-size: clamp(24px, 3.6vw, 34px); line-height: 1.15;
+  letter-spacing: -0.028em; font-weight: 700;
   background: linear-gradient(115deg, var(--brand1), var(--brand2));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.hero p {
-  max-width: 520px; margin: 20px auto 0;
-  font-size: 18px; line-height: 1.55; color: var(--dim);
+.hero .lead {
+  max-width: 560px; margin: 22px auto 0;
+  font-size: 17.5px; line-height: 1.55; color: var(--dim);
 }
+.hero .meta { margin-top: 14px; color: var(--dim); font-size: 13px; }
 .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
 .btn {
   display: inline-block; padding: 11px 22px; border-radius: 10px;
@@ -61,7 +66,6 @@ nav a:hover { color: var(--txt); }
 .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(91, 155, 255, .34); }
 .btn.ghost { color: var(--txt); border-color: var(--line); background: var(--bg); }
 .btn.ghost:hover { background: var(--panel); }
-.hero small { display: block; margin-top: 14px; color: var(--dim); font-size: 13px; }
 
 /* --- the chunk visual -------------------------------------------------- */
 .demo {
@@ -97,6 +101,7 @@ nav a:hover { color: var(--txt); }
   max-width: 980px; margin: 0 auto; padding: 96px 24px 0;
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
 }
+.grid-head { grid-column: 1 / -1; margin: 0 0 -4px; }
 .feat { padding: 22px; border: 1px solid var(--line); border-radius: 14px; }
 .feat h3 { margin: 0 0 7px; font-size: 15.5px; letter-spacing: -0.01em; }
 .feat p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--dim); }
@@ -119,7 +124,6 @@ code {
 footer {
   max-width: 980px; margin: 96px auto 0; padding: 22px 24px 56px;
   border-top: 1px solid var(--line); color: var(--dim); font-size: 14px;
-  display: flex; gap: 16px; flex-wrap: wrap;
 }
 footer .spacer { flex: 1; }
 
@@ -136,3 +140,37 @@ footer .spacer { flex: 1; }
 .wrap li { margin: 8px 0; }
 .lead { font-size: 18px; line-height: 1.55; color: var(--dim); }
 .wrap footer { margin-top: 56px; padding-left: 0; padding-right: 0; max-width: none; }
+
+/* --- lists, figures, FAQ ---------------------------------------------- */
+.section ul { padding-left: 20px; margin: 0; }
+.section li { margin: 9px 0; }
+.section.wide { max-width: 900px; }
+figure { margin: 0 0 26px; }
+figure img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+}
+figcaption { margin-top: 9px; color: var(--dim); font-size: 13.5px; }
+
+.qa { border-bottom: 1px solid var(--line); }
+.qa:first-of-type { border-top: 1px solid var(--line); }
+.qa summary {
+  cursor: pointer; padding: 15px 28px 15px 0; position: relative;
+  list-style: none;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary h3 { display: inline; margin: 0; font-size: 15.5px; font-weight: 600; }
+.qa summary::after {
+  content: "+"; position: absolute; right: 4px; top: 13px;
+  color: var(--dim); font-size: 19px; line-height: 1;
+}
+.qa[open] summary::after { content: "\2212"; }
+.qa summary:hover h3 { color: var(--acc); }
+.qa > p { margin: 0 0 18px; color: var(--dim); font-size: 15px; }
+
+/* --- footer ----------------------------------------------------------- */
+footer .frow { display: flex; gap: 16px; flex-wrap: wrap; align-items: baseline; }
+footer .disclaimer {
+  margin: 14px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--dim);
+  max-width: 620px;
+}

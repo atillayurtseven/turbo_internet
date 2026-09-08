@@ -45,8 +45,18 @@ After it finishes, check the redirect survived the rewrite:
 
 ## 5. Check
 
-    curl -I https://turbointernet.com/
-    curl -I https://turbointernet.com/privacy
+    for u in / /privacy /llms.txt /llms-full.txt /robots.txt /sitemap.xml; do
+        curl -sI "https://turbointernet.com$u" | head -1
+    done
 
-The second address is the one given to the Chrome Web Store as the privacy
-policy. Keep it working: a listing is rejected when the policy URL is dead.
+`/privacy` is the address given to the Chrome Web Store as the privacy policy.
+Keep it working: a listing is rejected when the policy URL is dead.
+
+Both duplicates must redirect rather than answer, or the two pages compete with
+themselves in the index:
+
+    curl -sI https://turbointernet.com/index.html | head -1   # 301
+    curl -sI https://turbointernet.com/privacy.html | head -1 # 301
+
+Finally, submit the sitemap in Google Search Console. A new domain with no
+inbound links otherwise sits undiscovered for weeks.
