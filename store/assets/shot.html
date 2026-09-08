@@ -1,0 +1,82 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="popup.css">
+<style>
+/* popup.css sayfanin body'sini de bicimlendiriyor; kendi duzenimizi ondan
+   sonra tanimlayip geri aliyoruz. Renkler de koyu temaya sabitleniyor,
+   yoksa headless acik temada basiyor. */
+:root, :root:not([x]) {
+  --bg:#0f1115; --panel:#171a21; --panel-2:#1e222b; --line:#2a2f3a;
+  --txt:#e6e9ef; --dim:#9aa3b2; --acc:#5b9bff; --ok:#3ddc97;
+  --track:#242935; --primary-bg:#1b2740; --primary-line:#33507e;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel-2:#1e222b; --line:#2a2f3a;
+    --txt:#e6e9ef; --dim:#9aa3b2; --acc:#5b9bff; --ok:#3ddc97;
+    --track:#242935; --primary-bg:#1b2740; --primary-line:#33507e;
+  }
+}
+html{margin:0}
+body{margin:0!important;width:1280px!important;height:800px!important;
+  max-height:none!important;overflow:hidden!important;
+  display:flex!important;flex-direction:row!important;
+  align-items:center!important;justify-content:center!important;gap:70px;
+  background:linear-gradient(135deg,#0d1220 0%,#161a2b 55%,#1d1533 100%)!important;
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e6e9ef}
+.left{width:470px;flex:0 0 auto}
+.left img{width:64px;height:64px;border-radius:16px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+p{font-size:18px;color:#9aa3b2;margin:0 0 26px}
+.pts{list-style:none;padding:0;margin:0}
+.pts li{display:flex;gap:10px;align-items:flex-start;margin:11px 0;font-size:15px;color:#c8cede}
+.pts b{color:#fff;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:#5b9bff;margin-top:8px;flex:0 0 auto}
+.shot{width:380px;flex:0 0 auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+</style></head><body>
+<div class="left">
+  <img src="icon128.png" alt="">
+  <h1>Downloads split across<br>several connections</h1>
+  <p>Faster where the server allows it — and it tells you exactly what it saved.</p>
+  <ul class="pts">
+    <li><span class="dot"></span><span><b>Rules per file type.</b> Choose what gets taken over, and how many connections it gets.</span></li>
+    <li><span class="dot"></span><span><b>It asks first.</b> Say no and Chrome keeps the download.</span></li>
+    <li><span class="dot"></span><span><b>Verified.</b> Every part is size-checked; optional SHA-256.</span></li>
+    <li><span class="dot"></span><span><b>Pause, resume, limit the speed.</b></span></li>
+  </ul>
+</div>
+<div class="shot">
+  <header class="top"><img class="logo" src="icon128.png"><div class="titles">
+    <div class="name">Turbo Internet Download Manager</div>
+    <div class="tagline">2 active · 41.6 MB/s</div></div>
+    <button class="icon">⚙</button></header>
+  <main class="list">
+    <article class="dl status-downloading"><div class="head"><div class="badge">ISO</div>
+      <div class="meta"><div class="filename">ubuntu-26.04.1-desktop-amd64.iso</div>
+      <div class="info"><span>3.1 GB / 6.0 GB</span><span>32.4 MB/s</span><span>1:29</span><span>8 parts</span></div></div></div>
+      <div class="bar"><div class="seg done" style="flex:1"><i style="width:100%"></i></div>
+      <div class="seg done" style="flex:1"><i style="width:100%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:74%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:58%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:41%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:28%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:17%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:6%"></i></div></div>
+      <div class="actions"><button class="primary">Pause</button><button>Cancel</button><button>Remove</button></div></article>
+    <article class="dl status-downloading"><div class="head"><div class="badge">MP4</div>
+      <div class="meta"><div class="filename">Conference keynote — full session</div>
+      <div class="info"><span>214 MB</span><span>9.2 MB/s</span><span>124 parts</span></div></div></div>
+      <div class="bar"><div class="seg done" style="flex:1"><i style="width:100%"></i></div>
+      <div class="seg done" style="flex:1"><i style="width:100%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:52%"></i></div>
+      <div class="seg" style="flex:1"><i style="width:9%"></i></div></div>
+      <div class="actions"><button class="primary">Pause</button><button>Cancel</button><button>Remove</button></div></article>
+    <article class="dl status-completed"><div class="head"><div class="badge">DMG</div>
+      <div class="meta"><div class="filename">blender-5.2.1-macos-arm64.dmg</div>
+      <div class="info"><span>330 MB</span><span>Completed</span><span class="sha">SHA-256 4f2a9c71b0e8…</span></div></div></div>
+      <div class="bar"><div class="seg done" style="flex:1"><i style="width:100%"></i></div></div>
+      <div class="actions"><button class="primary">Show in folder</button><button>Copy link</button><button>Remove</button></div></article>
+  </main>
+  <footer class="foot"><span>Queue: 0</span><span>Today: 3.6 GB</span><button>Clear completed</button></footer>
+</div>
+</body></html>
