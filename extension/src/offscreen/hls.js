@@ -1,4 +1,4 @@
-import { credentialsFor, referrerInit, HttpError } from './probe.js';
+import { credentialsFor, deadline, referrerInit, HttpError } from './probe.js';
 
 /**
  * Minimal HLS playlist reader: enough for downloading a VOD stream, not a
@@ -110,7 +110,7 @@ async function readKey(line, baseUrl, referrer, signal) {
   const response = await fetch(keyUrl, {
     credentials: credentialsFor(keyUrl),
     cache: 'no-store',
-    signal,
+    signal: deadline(signal),
     ...referrerInit(referrer),
   });
   if (!response.ok) throw new HttpError(response.status);
@@ -155,7 +155,7 @@ async function fetchText(url, referrer, signal) {
   const response = await fetch(url, {
     credentials: credentialsFor(url),
     cache: 'no-store',
-    signal,
+    signal: deadline(signal),
     ...referrerInit(referrer),
   });
   if (!response.ok) throw new HttpError(response.status);

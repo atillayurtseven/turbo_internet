@@ -105,19 +105,19 @@ function classify(details) {
 
   if (path.endsWith('.m3u8') || PLAYLIST_TYPES.includes(type)) {
     streaming.add(details.tabId);
-    return { url, kind: 'hls', label: 'HLS', name: nameFor(url, 'stream'), bytes: 0 };
+    return { url, kind: 'hls', label: 'HLS', name: nameFor(url), bytes: 0 };
   }
   if (path.endsWith('.mpd') || type === 'application/dash+xml') {
     streaming.add(details.tabId);
     // Detected so the user is not left wondering; DASH needs muxing we do not do.
-    return { url, kind: 'dash', label: 'DASH', name: nameFor(url, 'stream'), bytes: 0, unsupported: true };
+    return { url, kind: 'dash', label: 'DASH', name: nameFor(url), bytes: 0, unsupported: true };
   }
   // Progressive files only. Once a playlist has been seen on this tab, every
   // media response is a piece of that stream: offering one on its own produced
   // a headerless file that no player could open.
   if (streaming.has(details.tabId)) return null;
   if (/^video\/|^audio\//.test(type) && length >= MIN_DIRECT_BYTES && !isSegment(path)) {
-    return { url, kind: 'file', label: type.split('/')[1].toUpperCase(), name: nameFor(url, 'video'), bytes: length };
+    return { url, kind: 'file', label: type.split('/')[1].toUpperCase(), name: nameFor(url), bytes: length };
   }
   return null;
 }
@@ -140,7 +140,11 @@ async function readPlaylist(url) {
   try {
     // Same credentials the real download will use, so the check cannot reject
     // a stream that would in fact have worked.
-    const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+    const response = await fetch(url, {
+      credentials: 'include',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
+    });
     if (!response.ok) return null;
     const body = await response.text();
     if (!body.trimStart().startsWith('#EXTM3U')) return null;
@@ -158,6 +162,7 @@ async function looksComplete(url) {
       headers: { Range: 'bytes=0-15' },
       credentials: 'omit',
       cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
     });
     if (!response.ok && response.status !== 206) return false;
     const head = new Uint8Array((await response.arrayBuffer()).slice(0, 16));
@@ -171,7 +176,10 @@ async function looksComplete(url) {
   }
 }
 
-function remember(tabId, item, onChange) {
+async function remember(tabId, item, onChange) {
+  // Named once, here, so the list and the saved file agree.
+  if (!item.name) item.name = (await tabTitle(tabId)) || hostOf(item.url) || 'video';
+
   let list = perTab.get(tabId);
   if (!list) {
     list = new Map();
@@ -181,6 +189,23 @@ function remember(tabId, item, onChange) {
   list.set(item.url, { ...item, at: Date.now() });
   while (list.size > MAX_PER_TAB) list.delete(list.keys().next().value);
   onChange(tabId, item);
+}
+
+async function tabTitle(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return String(tab?.title || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
 }
 
 function isExcluded(url) {
@@ -204,17 +229,22 @@ function pathOf(url) {
   }
 }
 
-function nameFor(url, fallback) {
+/**
+ * A usable name from the URL, or '' when it has none.
+ *
+ * Falling back to the parent directory looked clever but produced names like
+ * "hls" or "video" -- the path segment every stream happens to sit under. An
+ * empty answer lets the page title be used instead, which is what a person
+ * would call the file.
+ */
+const GENERIC = /^(master|index|playlist|manifest|video|videos|stream|streams|hls|dash|media|out|play|chunklist|main|default|file|download|_.*_)$/i;
+
+function nameFor(url) {
   try {
-    const parts = new URL(url).pathname.split('/').filter(Boolean);
-    const last = decodeURIComponent(parts.pop() || '');
+    const last = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '');
     const base = last.replace(/\.(m3u8|mpd)$/i, '');
-    // Playlists are often called master.m3u8; the directory says more.
-    if (!base || /^(master|index|playlist|manifest)$/i.test(base)) {
-      return decodeURIComponent(parts.pop() || fallback);
-    }
-    return base;
+    return !base || GENERIC.test(base) ? '' : base;
   } catch {
-    return fallback;
+    return '';
   }
 }

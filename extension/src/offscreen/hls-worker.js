@@ -5,7 +5,7 @@
  * work in pieces, so a free lane simply takes the next one.
  */
 import { OPFS_DIR, PROGRESS_INTERVAL_MS } from '../shared/constants.js';
-import { credentialsFor, referrerInit, HttpError } from './probe.js';
+import { credentialsFor, deadline, referrerInit, HttpError } from './probe.js';
 
 let controller = null;
 let config = null;
@@ -43,8 +43,19 @@ async function start(payload) {
   progressTimer = setInterval(report, PROGRESS_INTERVAL_MS);
 
   // Segments already on disk from an interrupted run are not fetched again.
+  // The directory is read once: asking for each segment in turn meant thousands
+  // of sequential lookups before the first byte, on a playlist with thousands
+  // of segments.
+  const onDisk = new Map();
+  for await (const [name, handle] of dir.entries()) {
+    if (!name.startsWith(`${config.id}.`)) continue;
+    const index = Number(name.split('.')[1]);
+    if (Number.isInteger(index)) onDisk.set(index, handle);
+  }
   for (const segment of segments) {
-    const size = await existingSize(dir, segment.index);
+    const handle = onDisk.get(segment.index);
+    if (!handle) continue;
+    const size = (await handle.getFile()).size;
     if (size > 0) {
       segment.received = 1;
       received += size;
@@ -112,7 +123,8 @@ async function fetchSegment(segment, dir) {
     credentials: credentialsFor(segment.url),
     cache: 'no-store',
     redirect: 'follow',
-    signal: controller.signal,
+    // Stream segments are small; one that stalls should fail, not hang.
+    signal: deadline(controller.signal, 60000),
     ...referrerInit(config.referrer),
   });
   if (!response.ok) throw new HttpError(response.status);
@@ -141,15 +153,6 @@ async function fetchSegment(segment, dir) {
 
   segment.received = 1;
   received += bytes.byteLength;
-}
-
-async function existingSize(dir, index) {
-  try {
-    const file = await dir.getFileHandle(`${config.id}.${index}.part`, { create: false });
-    return (await file.getFile()).size;
-  } catch {
-    return 0;
-  }
 }
 
 function snapshot() {

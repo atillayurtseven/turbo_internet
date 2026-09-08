@@ -185,6 +185,18 @@ async function offerMedia(tabId, item) {
   }
 }
 
+/**
+ * The tab the popup belongs to. currentWindow is asked first: lastFocusedWindow
+ * can point at a different window entirely, and the popup would then list
+ * another tab's media, or none.
+ */
+async function activeTab() {
+  const [current] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (current) return current;
+  const [focused] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  return focused ?? null;
+}
+
 /** The page a download was started from, used as its Referer. */
 function pageOf(tab) {
   return /^https?:/i.test(tab?.url || '') ? tab.url : '';
@@ -238,7 +250,11 @@ async function startManual({ url, name, kind, referrer = '', title = '' }) {
 function sanitizeManualName(name, url, title) {
   const fromUrl = name || decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
   const base = fromUrl.replace(/\.[a-z0-9]{1,5}$/i, '');
-  const meaningless = !base || /^(master|index|playlist|manifest|video|stream|_.*_)$/i.test(base);
+  const meaningless =
+    !base ||
+    /^(master|index|playlist|manifest|video|videos|stream|streams|hls|dash|media|out|play|chunklist|main|default|file|download|_.*_)$/i.test(
+      base,
+    );
 
   const chosen = meaningless && title ? title : fromUrl || title || 'download';
   return sanitizeFilename(chosen.split(/[\\/]/).pop()).slice(0, 120) || 'download';
@@ -363,12 +379,12 @@ async function handleMessage(message, sender) {
       return { ok: true };
 
     case MSG.GET_MEDIA: {
-      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      const tab = await activeTab();
       return { ok: true, media: tab ? mediaFor(tab.id) : [] };
     }
 
     case MSG.CLEAR_MEDIA: {
-      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      const tab = await activeTab();
       if (tab) {
         clearMedia(tab.id);
         offeredTabs.delete(tab.id);
@@ -379,7 +395,7 @@ async function handleMessage(message, sender) {
 
     case MSG.DOWNLOAD_MEDIA:
     case MSG.DOWNLOAD_URL: {
-      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      const tab = await activeTab();
       await startManual({ referrer: pageOf(tab), title: tab?.title ?? '', ...(payload ?? {}) });
       return { ok: true };
     }

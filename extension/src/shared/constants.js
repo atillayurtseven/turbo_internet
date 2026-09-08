@@ -68,6 +68,8 @@ export const TERMINAL_STATUSES = new Set([
 
 export const OPFS_DIR = 'dlman';
 export const PROGRESS_INTERVAL_MS = 500;
+/** Small requests -- probes, playlists, keys -- must not hang forever. */
+export const REQUEST_TIMEOUT_MS = 30000;
 export const PERSIST_INTERVAL_MS = 4000;
 export const KEEPALIVE_INTERVAL_MS = 20000;
 export const MAX_HISTORY = 200;

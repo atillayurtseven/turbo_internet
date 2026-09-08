@@ -1,3 +1,4 @@
+import { REQUEST_TIMEOUT_MS } from '../shared/constants.js';
 import { filenameFromDisposition, sanitizeFilename } from '../shared/filetypes.js';
 
 /**
@@ -18,7 +19,7 @@ export async function probe(url, { referrer = '', signal } = {}) {
       credentials: 'include',
       cache: 'no-store',
       redirect: 'follow',
-      signal: controller.signal,
+      signal: deadline(controller.signal),
       ...referrerInit(referrer),
     });
 
@@ -74,6 +75,18 @@ export function referrerInit(referrer) {
  */
 export function credentialsFor(url) {
   return /^https?:/i.test(String(url)) ? 'include' : 'omit';
+}
+
+/**
+ * Adds a deadline to a request.
+ *
+ * A server that accepts the connection and then says nothing left downloads
+ * sitting on "checking server" with nothing to cancel and no error, because
+ * fetch on its own waits forever.
+ */
+export function deadline(signal, ms = REQUEST_TIMEOUT_MS) {
+  const timeout = AbortSignal.timeout(ms);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
 export class HttpError extends Error {
