@@ -1,4 +1,8 @@
 {
-  "extName":  { "message": "İndirme Yöneticisi" },
-  "extDesc":  { "message": "Dosya tipi tanıyan, kural bazlı parçalı (çoklu bağlantı) indirme yöneticisi." }
+  "extName": {
+    "message": "Turbo Downloader"
+  },
+  "extDesc": {
+    "message": "Dosya tipi tanıyan, kural bazlı parçalı (çoklu bağlantı) indirme yöneticisi."
+  }
 }
