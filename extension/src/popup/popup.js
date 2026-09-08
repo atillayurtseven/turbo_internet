@@ -301,7 +301,8 @@ function infoParts(task) {
     // so leaving it invisible made the setting look like it was ignored.
     if (task.segments?.length > 1) add(t('popup.segments', { n: task.segments.length }));
   } else {
-    add(t(`status.${task.status}`));
+    const step = task.stepPercent > 0 ? ` %${task.stepPercent}` : '';
+    add(`${t(`status.${task.status}`)}${step}`);
   }
 
   // Neither the segment count nor "completed" needs a chip: the progress bar

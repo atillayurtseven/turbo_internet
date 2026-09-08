@@ -39,8 +39,8 @@ export function registerMediaSniffer(onChange) {
       if (!item) return;
 
       if (item.kind === 'hls') {
-        playlistUsable(item.url).then((usable) => {
-          if (usable) remember(details.tabId, item, onChange);
+        readPlaylist(item.url).then((playlist) => {
+          if (playlist) remember(details.tabId, { ...item, master: playlist.master }, onChange);
         });
         return;
       }
@@ -79,7 +79,12 @@ export function mediaFor(tabId) {
   for (const [url, item] of list) {
     if (now - item.at > TTL_MS) list.delete(url);
   }
-  return [...list.values()].reverse();
+
+  const items = [...list.values()].reverse();
+  // One entry per stream: with a master playlist present, its quality variants
+  // are the same video listed several times over.
+  const hasMaster = items.some((item) => item.master);
+  return hasMaster ? items.filter((item) => item.kind !== 'hls' || item.master) : items;
 }
 
 export function clearMedia(tabId) {
@@ -131,16 +136,19 @@ function classify(details) {
  * clicks Download and gets an error, which reads as a broken extension rather
  * than a server saying no.
  */
-async function playlistUsable(url) {
+async function readPlaylist(url) {
   try {
     // Same credentials the real download will use, so the check cannot reject
     // a stream that would in fact have worked.
     const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
-    if (!response.ok) return false;
-    const head = (await response.text()).slice(0, 256).trimStart();
-    return head.startsWith('#EXTM3U');
+    if (!response.ok) return null;
+    const body = await response.text();
+    if (!body.trimStart().startsWith('#EXTM3U')) return null;
+    // A master lists other playlists; a media playlist lists segments. The
+    // master already covers every quality, so its variants are noise.
+    return { master: body.includes('#EXT-X-STREAM-INF') };
   } catch {
-    return false;
+    return null;
   }
 }
 

@@ -133,7 +133,7 @@ function stss(samples) {
 /**
  * @param init    the fragmented init segment (ftyp + moov)
  * @param tracks  Map(trackId -> { samples, chunks })
- * @param seconds total duration
+ * @param seconds fallback duration, used only when the samples carry none
  */
 export function buildMoov(init, tracks, seconds) {
   const view = new DataView(init.buffer, init.byteOffset, init.byteLength);
@@ -143,9 +143,10 @@ export function buildMoov(init, tracks, seconds) {
   const mvhdBox = boxes(view, moov.body, moov.end).find((b) => b.type === 'mvhd');
   // Read from the full buffer here, so this offset is absolute.
   const movieTimescale = view.getUint32(mvhdBox.start + MVHD.timescaleAt);
-  const mvhd = withDuration(init, mvhdBox, seconds, MVHD);
+
 
   const traks = [];
+  let longest = 0;
   for (const trak of boxes(view, moov.body, moov.end).filter((b) => b.type === 'trak')) {
     const tkhdBox = boxes(view, trak.body, trak.end).find((b) => b.type === 'tkhd');
     const trackId = view.getUint32(tkhdBox.body + 12);
@@ -154,6 +155,14 @@ export function buildMoov(init, tracks, seconds) {
 
     const mdiaBox = boxes(view, trak.body, trak.end).find((b) => b.type === 'mdia');
     const mdhdBox = boxes(view, mdiaBox.body, mdiaBox.end).find((b) => b.type === 'mdhd');
+
+    // Length comes from the samples themselves, not from the playlist. A
+    // playlist that overstates its duration -- or one the player never intended
+    // to be summed -- produced files that claimed to be hours long.
+    const mediaTimescale = view.getUint32(mdhdBox.start + MDHD.timescaleAt);
+    const ticks = data.samples.reduce((sum, sample) => sum + sample.duration, 0);
+    const trackSeconds = mediaTimescale > 0 && ticks > 0 ? ticks / mediaTimescale : seconds;
+    longest = Math.max(longest, trackSeconds);
     const hdlrBox = boxes(view, mdiaBox.body, mdiaBox.end).find((b) => b.type === 'hdlr');
     const minfBox = boxes(view, mdiaBox.body, mdiaBox.end).find((b) => b.type === 'minf');
     const stsdBox = find(view, minfBox.body, minfBox.end, ['stbl', 'stsd']);
@@ -176,13 +185,13 @@ export function buildMoov(init, tracks, seconds) {
       box(
         'trak',
         // tkhd has no timescale of its own; it counts in movie units.
-        withDuration(init, tkhdBox, seconds, {
+        withDuration(init, tkhdBox, trackSeconds, {
           durationAt: TKHD_DURATION_AT,
           timescale: movieTimescale,
         }),
         box(
           'mdia',
-          withDuration(init, mdhdBox, seconds, MDHD),
+          withDuration(init, mdhdBox, trackSeconds, MDHD),
           slice(init, hdlrBox),
           box('minf', ...header.map((b) => slice(init, b)), box('stbl', ...tables)),
         ),
@@ -191,6 +200,7 @@ export function buildMoov(init, tracks, seconds) {
   }
 
   if (traks.length === 0) throw new Error('no tracks to write');
+  const mvhd = withDuration(init, mvhdBox, longest || seconds, MVHD);
   return box('moov', mvhd, ...traks);
 }
 

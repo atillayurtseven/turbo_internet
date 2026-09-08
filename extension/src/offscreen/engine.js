@@ -256,7 +256,12 @@ export class Engine {
 
     worker.onmessage = (event) => {
       const message = event.data ?? {};
-      if (message.type === 'progress') return;
+      // Surfaced, not swallowed: converting a 500 MB stream takes minutes, and
+      // a status line that never moves reads as a stuck download.
+      if (message.type === 'progress') {
+        this.#step(task, message.done, message.total);
+        return;
+      }
       if (message.type === 'done') {
         this.#onWorkerMessage(task.id, { type: 'remuxed', parts: message.parts });
       } else if (message.type === 'stopped') {
@@ -350,6 +355,10 @@ export class Engine {
       };
       worker.onmessage = (event) => {
         const message = event.data ?? {};
+        if (message.type === 'progress') {
+          this.#step(task, message.done, message.total);
+          return;
+        }
         if (message.type === 'done') finish(message.sha256);
         // A checksum is a convenience; failing to produce one must not lose the
         // download, so the file is delivered without it.
@@ -614,7 +623,17 @@ export class Engine {
     }
   }
 
+  /** Records how far a long step has got, at the same rate as download progress. */
+  #step(task, done, total) {
+    if (!total) return;
+    const percent = Math.min(100, Math.round((done / total) * 100));
+    if (percent === task.stepPercent) return;
+    task.stepPercent = percent;
+    this.#push();
+  }
+
   #setStatus(task, status) {
+    task.stepPercent = 0;
     console.info('[dlman/engine]', task.filename, task.status, '->', status);
     task.status = status;
     if (TERMINAL_STATUSES.has(status)) task.speed = 0;

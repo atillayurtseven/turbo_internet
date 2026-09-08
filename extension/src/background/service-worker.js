@@ -177,7 +177,8 @@ async function offerMedia(tabId, item) {
       label: item.bytes > 0 ? item.label : `${item.label} · ${hostOf(item.url)}`,
     });
     if (choice === CHOICE_MANAGER) {
-      await startManual({ ...item, name: item.name, referrer: await pageUrl(tabId) });
+      const page = await pageInfo(tabId);
+      await startManual({ ...item, name: item.name, referrer: page.url, title: page.title });
     }
   } finally {
     prompting.delete(tabId);
@@ -189,11 +190,12 @@ function pageOf(tab) {
   return /^https?:/i.test(tab?.url || '') ? tab.url : '';
 }
 
-async function pageUrl(tabId) {
+async function pageInfo(tabId) {
   try {
-    return pageOf(await chrome.tabs.get(tabId));
+    const tab = await chrome.tabs.get(tabId);
+    return { url: pageOf(tab), title: tab?.title ?? '' };
   } catch {
-    return '';
+    return { url: '', title: '' };
   }
 }
 
@@ -206,11 +208,11 @@ function hostOf(url) {
 }
 
 /** Queues something the user picked by hand: a page's media, or a pasted URL. */
-async function startManual({ url, name, kind, referrer = '' }) {
+async function startManual({ url, name, kind, referrer = '', title = '' }) {
   await ready;
   // The interceptor path checks this in rules.js; messages come in unchecked.
   if (!/^https?:\/\//i.test(String(url))) throw new Error('unsupported-scheme');
-  const filename = sanitizeManualName(name, url);
+  const filename = sanitizeManualName(name, url, title);
   const matched = matchRule(settings.rules, { filename, url, mime: '' });
   return start({
     url,
@@ -226,9 +228,20 @@ async function startManual({ url, name, kind, referrer = '' }) {
   });
 }
 
-function sanitizeManualName(name, url) {
-  const raw = name || decodeURIComponent(new URL(url).pathname.split('/').pop() || 'download');
-  return sanitizeFilename(raw.split(/[\\/]/).pop());
+/**
+ * Names a stream after the page it plays on.
+ *
+ * A stream's URL says nothing useful -- "master", "index", or a template token
+ * -- so the page title is the only human-readable name available. The URL is
+ * still used when it carries a real name, or when there is no title.
+ */
+function sanitizeManualName(name, url, title) {
+  const fromUrl = name || decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
+  const base = fromUrl.replace(/\.[a-z0-9]{1,5}$/i, '');
+  const meaningless = !base || /^(master|index|playlist|manifest|video|stream|_.*_)$/i.test(base);
+
+  const chosen = meaningless && title ? title : fromUrl || title || 'download';
+  return sanitizeFilename(chosen.split(/[\\/]/).pop()).slice(0, 120) || 'download';
 }
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
@@ -367,7 +380,7 @@ async function handleMessage(message, sender) {
     case MSG.DOWNLOAD_MEDIA:
     case MSG.DOWNLOAD_URL: {
       const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-      await startManual({ referrer: pageOf(tab), ...(payload ?? {}) });
+      await startManual({ referrer: pageOf(tab), title: tab?.title ?? '', ...(payload ?? {}) });
       return { ok: true };
     }
 
