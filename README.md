@@ -2,7 +2,9 @@
 
 **Turbo Internet Download Manager** — a Chrome (MV3) download manager that
 recognises file types and, where the server allows it, downloads them over
-several connections at once. Site: <https://turbointernet.com>
+several connections at once. It also downloads video that a page plays —
+HLS streams and direct media files — and saves streams as a plain MP4.
+Site: <https://turbointernet.com>
 
 Not affiliated with Tonec Inc. or its product Internet Download Manager (IDM).
 
@@ -79,6 +81,12 @@ sample table (`stts`/`ctts`/`stsc`/`stsz`/`co64`/`stss`) is built. Fragmented
 MP4 is a streaming format — it plays from the start and nothing else, and many
 desktop players refuse it. Nothing is re-encoded. If conversion fails the
 download is still delivered, as `.ts`.
+
+Stream links on CDNs are usually signed and rotated every few minutes, so a
+stored playlist URL starts answering 404 soon after the page loaded. A failed
+stream therefore reports that its link expired rather than offering a Retry
+that can only hit the same dead URL. Re-download looks the stream up again in
+the tab's current media list and uses that page as the new `Referer`.
 
 **Out of scope:** YouTube and comparable platforms. Downloading from them breaks
 their terms of service, and Chrome Web Store policy forbids extensions that do.
