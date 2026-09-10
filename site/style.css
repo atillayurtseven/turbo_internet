@@ -175,13 +175,7 @@ footer .disclaimer {
   max-width: 620px;
 }
 
-/* --- GitHub, not yet public ------------------------------------------- */
-.gh-soon { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); font-size: 14px; cursor: default; }
-.gh-soon svg, .btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
-.soon-tag {
-  font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
-  padding: 1px 6px; border-radius: 999px;
-  background: var(--panel); border: 1px solid var(--line); color: var(--dim);
-}
-.btn.is-soon { display: inline-flex; align-items: center; gap: 8px; color: var(--dim); cursor: default; }
-.btn.is-soon:hover { background: var(--bg); transform: none; }
+/* --- GitHub ----------------------------------------------------------- */
+.gh { display: inline-flex; align-items: center; gap: 6px; }
+.gh svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.btn.gh { gap: 8px; }
