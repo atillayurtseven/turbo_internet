@@ -18,7 +18,7 @@ no desktop application and no companion plugin.
 
 - [Home](https://turbointernet.com/): what the extension does, screenshots, verification results, limits, and 21 answered questions.
 - [Questions](https://turbointernet.com/#faq): Mac support, price, speed, connections, resuming, logins, HLS, permissions, install, troubleshooting.
-- [Source code](https://github.com/atillayurtseven/turbo_internet): the extension and this site, in full.
+- [Source code](https://github.com/atillayurtseven/turbo-internet-download-manager): the extension and this site, in full.
 - [Privacy policy](https://turbointernet.com/privacy): what is stored, what the extension observes, and the reason for each Chrome permission.
 
 ## What it does
@@ -84,7 +84,7 @@ Driven through the Chrome DevTools Protocol against a local server.
 Turbo Internet Download Manager collects no data and sends nothing to its
 publisher. There is no backend service. Files travel straight from the origin
 server to the user's disk and are never proxied through anyone else. The source code is public at
-https://github.com/atillayurtseven/turbo_internet, so these claims can be checked rather than
+https://github.com/atillayurtseven/turbo-internet-download-manager, so these claims can be checked rather than
 taken on trust. The
 clipboard features that watch for copied links can both be switched off.
 

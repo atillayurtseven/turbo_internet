@@ -1,4 +1,4 @@
-# turbo_internet
+# Turbo Internet Download Manager
 
 **Turbo Internet Download Manager** — a Chrome (MV3) download manager that
 recognises file types and, where the server allows it, downloads them over
