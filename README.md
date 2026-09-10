@@ -1,7 +1,10 @@
-# chrome_dlman
+# turbo_internet
 
-A Chrome (MV3) download manager that recognises file types and, where the
-server allows it, downloads them over several connections at once.
+**Turbo Internet Download Manager** — a Chrome (MV3) download manager that
+recognises file types and, where the server allows it, downloads them over
+several connections at once. Site: <https://turbointernet.com>
+
+Not affiliated with Tonec Inc. or its product Internet Download Manager (IDM).
 
 ## Install
 
