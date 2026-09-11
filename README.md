@@ -4,13 +4,18 @@
 recognises file types and, where the server allows it, downloads them over
 several connections at once. It also downloads video that a page plays —
 HLS streams and direct media files — and saves streams as a plain MP4.
-Site: <https://turbointernet.com>
+Site: <https://turbointernet.com> ·
+[Chrome Web Store](https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd)
+
+Built entirely with Claude (Anthropic).
 
 Not affiliated with Tonec Inc. or its product Internet Download Manager (IDM).
 
 ## Install
 
-`chrome://extensions` → Developer mode → **Load unpacked** → pick `extension/`.
+[**Chrome Web Store**](https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd) → **Add to Chrome**.
+
+From source: `chrome://extensions` → Developer mode → **Load unpacked** → pick `extension/`.
 
 ## Architecture
 

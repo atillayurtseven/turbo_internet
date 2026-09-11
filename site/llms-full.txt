@@ -6,8 +6,8 @@
 > wherever Chrome 116 or later runs: macOS, Windows, Linux and ChromeOS.
 
 Published by TurboInternet (info@turbointernet.com). Free: no paid tier, no
-trial period, no licence key, no account. Not yet listed on the Chrome Web
-Store; it currently loads unpacked from source.
+trial period, no licence key, no account. Available on the Chrome Web Store:
+https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd
 
 Turbo Internet Download Manager is unrelated to Internet Download Manager (IDM)
 by Tonec Inc., a paid Windows-only desktop application that reaches the browser
@@ -18,6 +18,7 @@ no desktop application and no companion plugin.
 
 - [Home](https://turbointernet.com/): what the extension does, screenshots, verification results, limits, and 21 answered questions.
 - [Questions](https://turbointernet.com/#faq): Mac support, price, speed, connections, resuming, logins, HLS, permissions, install, troubleshooting.
+- [Chrome Web Store](https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd): install the extension.
 - [Source code](https://github.com/atillayurtseven/turbo-internet-download-manager): the extension and this site, in full.
 - [Privacy policy](https://turbointernet.com/privacy): what is stored, what the extension observes, and the reason for each Chrome permission.
 
@@ -228,9 +229,11 @@ APIs and are not supported.
 
 ### How do I install it?
 
-A Chrome Web Store listing is on the way. Until then it loads from source:
-open chrome://extensions, turn on Developer mode, choose Load unpacked and
-select the extension folder. Chrome 116 or later is required.
+Install it from the Chrome Web Store at
+https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd
+and choose Add to Chrome. Chrome 116 or later is required. To run it from
+source instead, open chrome://extensions, turn on Developer mode, choose Load
+unpacked and select the extension folder.
 
 ### What languages does it speak?
 
