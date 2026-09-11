@@ -1,21 +1,22 @@
 # Turbo Internet Download Manager
 
-**Turbo Internet Download Manager** — a Chrome (MV3) download manager that
+**Turbo Internet Download Manager** is a Chrome (MV3) download manager that
 recognises file types and, where the server allows it, downloads them over
-several connections at once. It also downloads video that a page plays —
-HLS streams and direct media files — and saves streams as a plain MP4.
-Site: <https://turbointernet.com> ·
-[Chrome Web Store](https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd)
+several connections at once. It also downloads video that a page plays
+(HLS streams and direct media files) and saves streams as a plain MP4.
 
 Built entirely with Claude (Anthropic).
 
 Not affiliated with Tonec Inc. or its product Internet Download Manager (IDM).
 
-## Install
+## Get it
 
-[**Chrome Web Store**](https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd) → **Add to Chrome**.
+- **Chrome Web Store:** [Turbo Internet Download Manager](https://chromewebstore.google.com/detail/turbo-internet-download-m/hekigdjjbhdnjmlhdjpmbbnkbmeniemd), then **Add to Chrome**
+- **Website:** <https://turbointernet.com>
 
-From source: `chrome://extensions` → Developer mode → **Load unpacked** → pick `extension/`.
+## Install from source
+
+`chrome://extensions` → Developer mode → **Load unpacked** → pick `extension/`.
 
 ## Architecture
 
@@ -41,7 +42,7 @@ From source: `chrome://extensions` → Developer mode → **Load unpacked** → 
 document solves both.
 
 **Why one OPFS file per part?** Measured: growing a single OPFS file past about
-2 GB fails *silently* — `truncate()` reports no error and leaves the file empty,
+2 GB fails *silently*: `truncate()` reports no error and leaves the file empty,
 even with 11 GB of quota available. Each part is therefore capped at 1 GB and
 the finished file is joined with `new Blob([...])`, which references the parts
 on disk rather than loading them into memory.
@@ -73,7 +74,7 @@ most left to do. Guards, so splitting cannot chase its own tail:
 
 Requests are watched for playable media; HLS streams and large progressive files
 found on a page are offered in the popup. A playlist is only offered once it has
-been fetched successfully and starts with `#EXTM3U` — offering something that
+been fetched successfully and starts with `#EXTM3U`. Offering something that
 cannot be downloaded reads as a broken extension rather than a server saying no.
 
 Supported: TS and fMP4 segments, `EXT-X-MAP`, `EXT-X-BYTERANGE`, and AES-128
@@ -83,7 +84,7 @@ anything Widevine-backed are refused.
 TS streams are converted to a **plain, seekable MP4**: mux.js does the codec
 work and emits fragmented MP4, then the fragments are unwrapped and a real
 sample table (`stts`/`ctts`/`stsc`/`stsz`/`co64`/`stss`) is built. Fragmented
-MP4 is a streaming format — it plays from the start and nothing else, and many
+MP4 is a streaming format: it plays from the start and nothing else, and many
 desktop players refuse it. Nothing is re-encoded. If conversion fails the
 download is still delivered, as `.ts`.
 
@@ -114,7 +115,7 @@ read when the popup opens, and a paste field. Both can be switched off.
 Changes save immediately; there is no Save button. Note the **minimum size**
 column: by default disk images under 20 MB, archives under 10 MB, video under
 5 MB and installers under 2 MB are left to Chrome. If nothing is being taken
-over, check that first — the service worker console logs
+over, check that first. The service worker console logs
 `[dlman] skipped below-min-size`.
 
 Optional SHA-256 after downloading, for comparing against a published checksum.
@@ -149,4 +150,4 @@ Add `src/locales/<code>.json` and list the code in `SUPPORTED_LOCALES` in
 
 ## Third party
 
-`extension/vendor/mux.min.js` — mux.js 7.0.3, Apache-2.0.
+`extension/vendor/mux.min.js`: mux.js 7.0.3, Apache-2.0.

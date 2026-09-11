@@ -66,6 +66,8 @@ nav .brand:hover b { color: var(--acc); }
 .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(91, 155, 255, .34); }
 .btn.ghost { color: var(--txt); border-color: var(--line); background: var(--bg); }
 .btn.ghost:hover { background: var(--panel); }
+.btn.store { display: inline-flex; align-items: center; gap: 9px; }
+.btn.store svg { width: 18px; height: 18px; flex: 0 0 auto; }
 
 /* --- the chunk visual -------------------------------------------------- */
 .demo {
